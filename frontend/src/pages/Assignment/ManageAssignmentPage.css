@@ -1,0 +1,139 @@
+:root {
+  --primary: #A435F0;
+  --primary-hover: #8710d8;
+  --bg: #f7f9fa;
+  --white: #ffffff;
+  --border: #e0e0e0;
+  --text: #1c1d1f;
+}
+
+/* Layout */
+.assignment-page {
+  background: var(--bg);
+  min-height: 100vh;
+  padding: 40px 20px;
+}
+
+.container {
+  max-width: 950px;
+  margin: auto;
+}
+
+/* Header */
+.header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+}
+
+.header h1 {
+  font-size: 26px;
+}
+
+/* Add button */
+.btn-add {
+  background: var(--primary);
+  color: white;
+  border: none;
+  padding: 10px 16px;
+  border-radius: 8px;
+  cursor: pointer;
+}
+
+.btn-add:hover {
+  background: var(--primary-hover);
+}
+
+/* List */
+.assignment-list {
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+}
+
+/* Card */
+.assignment-card {
+  background: var(--white);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 16px 20px;
+
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+
+  transition: 0.25s;
+}
+
+.assignment-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.08);
+}
+
+/* Left */
+.left {
+  display: flex;
+  gap: 15px;
+  align-items: center;
+}
+
+.index {
+  font-weight: bold;
+  color: var(--primary);
+}
+
+.left h3 {
+  margin: 0;
+}
+
+.left p {
+  font-size: 13px;
+  color: #666;
+}
+
+.due {
+  font-size: 12px;
+  color: #999;
+}
+
+/* Right */
+.right {
+  display: flex;
+  gap: 8px;
+}
+
+/* Buttons */
+.btn-edit,
+.btn-view,
+.btn-delete {
+  padding: 8px 12px;
+  border-radius: 8px;
+  border: none;
+  cursor: pointer;
+}
+
+.btn-edit {
+  background: var(--primary);
+  color: white;
+}
+
+.btn-edit:hover {
+  background: var(--primary-hover);
+}
+
+.btn-view {
+  background: #e9e9ff;
+}
+
+.btn-view:hover {
+  background: #dcdcff;
+}
+
+.btn-delete {
+  background: #eee;
+}
+
+.btn-delete:hover {
+  background: #ddd;
+}

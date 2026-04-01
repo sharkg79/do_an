@@ -1,0 +1,111 @@
+:root {
+  --primary: #A435F0;
+  --primary-hover: #8710d8;
+  --bg: #f7f9fa;
+  --white: #ffffff;
+  --border: #e0e0e0;
+  --text: #1c1d1f;
+}
+
+/* Layout */
+.lesson-page {
+  background: var(--bg);
+  min-height: 100vh;
+  padding: 40px 20px;
+}
+
+.container {
+  max-width: 900px;
+  margin: auto;
+}
+
+/* Header */
+.header {
+  margin-bottom: 20px;
+}
+
+.header h1 {
+  font-size: 26px;
+}
+
+/* Lesson list */
+.lesson-list {
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+}
+
+/* Card */
+.lesson-card {
+  background: var(--white);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 15px 20px;
+
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+
+  transition: all 0.25s ease;
+}
+
+.lesson-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.08);
+}
+
+/* Left */
+.left {
+  display: flex;
+  gap: 15px;
+  align-items: center;
+}
+
+.index {
+  font-weight: bold;
+  font-size: 16px;
+  color: var(--primary);
+}
+
+.left h3 {
+  margin: 0;
+}
+
+.left p {
+  font-size: 13px;
+  color: #666;
+  margin-top: 4px;
+}
+
+/* Right */
+.right {
+  display: flex;
+  gap: 10px;
+}
+
+/* Buttons */
+.btn-edit {
+  padding: 8px 14px;
+  border-radius: 8px;
+  border: none;
+  background: var(--primary);
+  color: white;
+  cursor: pointer;
+  transition: 0.2s;
+}
+
+.btn-edit:hover {
+  background: var(--primary-hover);
+}
+
+.btn-delete {
+  padding: 8px 14px;
+  border-radius: 8px;
+  border: none;
+  background: #eee;
+  cursor: pointer;
+}
+
+.btn-delete:hover {
+  background: #ddd;
+}
