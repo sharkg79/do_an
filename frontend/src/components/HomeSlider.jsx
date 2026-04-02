@@ -1,13 +1,15 @@
 import { Box, Image } from "@chakra-ui/react";
 import Slider from "react-slick";
 import { ArrowBackIcon, ArrowForwardIcon } from "@chakra-ui/icons";
-import banner1 from "../images/banner1.jpg";
-import banner2 from "../images/banner2.jpg";
-import banner3 from "../images/banner3.avif";
 import "slick-carousel/slick/slick.css";
 import "slick-carousel/slick/slick-theme.css";
 import { ChevronLeftIcon, ChevronRightIcon } from "@chakra-ui/icons";
-const banners = [banner1, banner2, banner3];
+const banners = [
+  "https://picsum.photos/1200/500?random=1",
+  "https://picsum.photos/1200/500?random=2",
+  "https://picsum.photos/1200/500?random=3",
+  "https://picsum.photos/1200/500?random=4",
+];
 
 // Nút trái
 const PrevArrow = ({ onClick }) => (

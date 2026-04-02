@@ -15,7 +15,11 @@ const lessonSchema = new mongoose.Schema({
     ref: "User",
     required: true
   },
-
+class: {
+  type: mongoose.Schema.Types.ObjectId,
+  ref: "Class",
+  required: true
+},
   contentType: {
     type: String,
     enum: ["video", "document"],

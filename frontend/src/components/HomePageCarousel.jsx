@@ -2,7 +2,7 @@ import React, { useEffect, useState } from "react";
 import { Box, Text, Image, Badge, HStack } from "@chakra-ui/react";
 import Slider from "react-slick";
 import { ChevronLeftIcon, ChevronRightIcon } from "@chakra-ui/icons";
-
+import { useNavigate } from "react-router-dom";
 // 🔹 import API wrapper
 import { getCoursesAPI } from "../api/course.api";
 
@@ -48,15 +48,17 @@ const PrevArrow = ({ onClick }) => (
 const HomePageCarousel = ({ category }) => {
   const [courses, setCourses] = useState([]);
   const [loading, setLoading] = useState(true);
-
+  const navigate = useNavigate();
   useEffect(() => {
     const fetchCourses = async () => {
       try {
         let data = await getCoursesAPI();
         // 🔹 filter theo category nếu cần
         if (category && category !== "all") {
-          data = data.filter((c) => c.categories?.includes(category));
-        }
+  data = data.filter(
+    (c) => c.category?.toLowerCase() === category.toLowerCase()
+  );
+}
 
         // 🔹 fallback fields nếu backend chưa có
         const coursesWithDefaults = data.map((c) => ({
@@ -110,6 +112,7 @@ const HomePageCarousel = ({ category }) => {
               _hover={{ transform: "translateY(-5px)" }}
               transition="0.3s"
               cursor="pointer"
+              onClick={() => navigate(`/courses/${course._id}`)}
             >
               <Image
                 src={course.image}
@@ -144,6 +147,7 @@ const HomePageCarousel = ({ category }) => {
               _hover={{ transform: "translateY(-5px)" }}
               transition="0.3s"
               cursor="pointer"
+              onClick={() => navigate(`/courses/${course._id}`)}
             >
               <Image
                 src={course.image}

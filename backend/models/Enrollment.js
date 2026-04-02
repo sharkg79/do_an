@@ -12,7 +12,10 @@ const enrollmentSchema = new mongoose.Schema({
     ref: "Course",
     required: true
   },
-
+class: {
+  type: mongoose.Schema.Types.ObjectId,
+  ref: "Class"
+}
   isPaid: {
     type: Boolean,
     default: false

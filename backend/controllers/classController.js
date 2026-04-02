@@ -87,7 +87,9 @@ const getClassById = async (req, res) => {
       return res.status(404).json({ message: "Class not found" });
     }
 
-    res.json(classObj);
+    res.json({
+  class: classObj
+});
 
   } catch (error) {
     res.status(500).json({ message: error.message });
@@ -203,6 +205,7 @@ const enrollClass = async (req, res) => {
 };
 
 // GET CLASSES BY COURSE
+// controllers/classController.js
 const getClassesByCourse = async (req, res) => {
   try {
     const { courseId } = req.params;
@@ -212,10 +215,10 @@ const getClassesByCourse = async (req, res) => {
     }
 
     const classes = await Class.find({ course: courseId })
-      .populate("instructor", "name email");
+      .populate("instructor", "name email")
+      .populate("students", "_id"); // lấy _id của tất cả students
 
     res.json(classes);
-
   } catch (error) {
     res.status(500).json({ message: error.message });
   }

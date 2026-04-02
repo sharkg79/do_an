@@ -10,7 +10,7 @@ async function createCourse(req, res) {
     const course = new Course({
       title,
       description,
-      category: category || "beginner",
+      category: category?.toLowerCase() || "beginner",
       level: level || "Beginner",
       price: price || 0,
       image: image || "https://picsum.photos/300/200",
@@ -81,7 +81,7 @@ async function updateCourse(req, res) {
       req.body;
     if (title) course.title = title;
     if (description) course.description = description;
-    if (category) course.category = category;
+    if (category) course.category = category.toLowerCase();
     if (level) course.level = level;
     if (price !== undefined) course.price = price;
     if (image) course.image = image;
