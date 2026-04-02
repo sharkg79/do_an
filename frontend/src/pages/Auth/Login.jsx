@@ -39,7 +39,7 @@ const Login = () => {
 
     // ✅ điều hướng đúng
     if (res.user.role === "ADMIN") {
-      navigate("/admin", { replace: true });
+      navigate("/admin/dashboard", { replace: true });
     } else {
       navigate("/", { replace: true });
     }

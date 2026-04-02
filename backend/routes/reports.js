@@ -7,6 +7,7 @@ const {
   getDashboardSummary,
   getCourseProgress,
   getInstructorDashboard,
+  getStudentDashboard
 } = require("../controllers/reportController");
 
 // ======================= REPORT ROUTES =======================
@@ -17,4 +18,6 @@ router.get("/summary", auth, role(["ADMIN", "INSTRUCTOR"]), getDashboardSummary)
 // Course progress 
 router.get("/course-progress", auth, role(["ADMIN", "INSTRUCTOR"]), getCourseProgress);
 router.get( "/instructor-dashboard", auth, role(["INSTRUCTOR"]), getInstructorDashboard );
+router.get( "/dashboard", auth, role(["ADMIN"]), getDashboardSummary);
+router.get("/student-dashboard",auth,role(["STUDENT"]),getStudentDashboard);
 module.exports = router;

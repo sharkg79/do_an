@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
-import axios from "axios";
-
+import axios from "../../api/axios";
+import Navbar from "../../components/Navbar";
+import {Box} from "@chakra-ui/react";
 const CertificatePage = () => {
   const [certificates, setCertificates] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -33,6 +34,8 @@ const CertificatePage = () => {
   }
 
   return (
+    <Box>
+      <Navbar />
     <div className="min-h-screen bg-[#f7f9fa] p-8">
       {/* Title */}
       <h1 className="text-3xl font-bold mb-6 text-gray-800">
@@ -79,6 +82,7 @@ const CertificatePage = () => {
         </div>
       )}
     </div>
+    </Box>
   );
 };
 

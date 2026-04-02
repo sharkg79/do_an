@@ -6,15 +6,28 @@ import {
   MenuButton,
   MenuList,
   MenuItem,
-  Avatar
+  Avatar,
+  Input,
+  InputGroup,
+  InputLeftElement
 } from "@chakra-ui/react";
+import { SearchIcon } from "@chakra-ui/icons";
 
-import { useContext } from "react";
+import { useContext, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { AuthContext } from "../context/AuthContext";
+
 const Navbar = () => {
   const { user, logout } = useContext(AuthContext) || {};
   const navigate = useNavigate();
+  const [keyword, setKeyword] = useState("");
+
+  const handleSearch = () => {
+    if (!keyword.trim()) return;
+    navigate(`/courses?search=${keyword}`);
+  };
+
+  const role = user?.role;
 
   return (
     <Flex
@@ -27,16 +40,32 @@ const Navbar = () => {
       position="sticky"
       top="0"
       zIndex="1000"
+      gap={6}
     >
+      {/* Logo */}
       <Text
-        fontSize="lg"
+        fontSize="xl"
         fontWeight="bold"
         cursor="pointer"
         onClick={() => navigate("/")}
       >
-        LMS
+        🎓 LMS
       </Text>
 
+      {/* 🔍 Search */}
+      <InputGroup maxW="400px">
+        <InputLeftElement pointerEvents="none">
+          <SearchIcon onClick={handleSearch} cursor="pointer" />
+        </InputLeftElement>
+        <Input
+          placeholder="Search courses..."
+          value={keyword}
+          onChange={(e) => setKeyword(e.target.value)}
+          onKeyDown={(e) => e.key === "Enter" && handleSearch()}
+        />
+      </InputGroup>
+
+      {/* Auth */}
       {!user ? (
         <Flex gap={3}>
           <Button onClick={() => navigate("/login")}>Login</Button>
@@ -45,15 +74,24 @@ const Navbar = () => {
       ) : (
         <Menu>
           <MenuButton>
-            <Avatar size="sm" name={user?.name} />
+            <Avatar
+              size="sm"
+              name={user?.name}
+              src={user?.avatar}
+              cursor="pointer"
+            />
           </MenuButton>
 
           <MenuList>
-            <MenuItem onClick={() => navigate("/")}>Home</MenuItem>
+            {/* Common */}
+            <MenuItem onClick={() => navigate("/profile")}>
+              Profile
+            </MenuItem>
 
-            {user?.role === "ADMIN" && (
+            {/* Role-based */}
+            {role === "ADMIN" && (
               <>
-                <MenuItem onClick={() => navigate("/admin")}>
+                <MenuItem onClick={() => navigate("admin/dashboard")}>
                   Dashboard
                 </MenuItem>
                 <MenuItem onClick={() => navigate("/admin/users")}>
@@ -62,9 +100,32 @@ const Navbar = () => {
               </>
             )}
 
+            {role === "INSTRUCTOR" && (
+              <>
+                <MenuItem onClick={() => navigate("/teacher/courses")}>
+                  My Courses
+                </MenuItem>
+                <MenuItem onClick={() => navigate("/instructor/create-course")}>
+                  Create Course
+                </MenuItem>
+              </>
+            )}
+
+            {role === "STUDENT" && (
+              <>
+              <MenuItem onClick={() => navigate("/student-dashboard")}>
+                Student Dashboard
+              </MenuItem>
+              <MenuItem onClick={() => navigate("/certificates")}>
+                Chứng chỉ
+              </MenuItem>
+              </>
+            )}
+
+            {/* Logout */}
             <MenuItem
-              onClick={() => {
-                logout?.();
+              onClick={async () => {
+                await logout?.();
                 navigate("/login");
               }}
             >
@@ -76,4 +137,5 @@ const Navbar = () => {
     </Flex>
   );
 };
+
 export default Navbar;

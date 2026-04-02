@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useEffect, useState } from "react";
 import { Box, Text, Image, Progress, Badge } from "@chakra-ui/react";
 import { ChevronLeftIcon, ChevronRightIcon } from "@chakra-ui/icons";
 import Slider from "react-slick";
@@ -42,38 +42,35 @@ const PrevArrow = ({ onClick }) => (
   </Box>
 );
 
-const courses = [
-  {
-    id: 1,
-    title: "IELTS Speaking Mastery",
-    level: "Intermediate",
-    image: "https://picsum.photos/300/200?21",
-    progress: 60,
-  },
-  {
-    id: 2,
-    title: "Basic English for Beginners",
-    level: "Beginner",
-    image: "https://picsum.photos/300/200?22",
-    progress: 30,
-  },
-  {
-    id: 3,
-    title: "Advanced English Writing",
-    level: "Advanced",
-    image: "https://picsum.photos/300/200?23",
-    progress: 80,
-  },
-  {
-    id: 4,
-    title: "TOEIC Listening Practice",
-    level: "Intermediate",
-    image: "https://picsum.photos/300/200?24",
-    progress: 45,
-  },
-];
-
 const InProgressCarousel = () => {
+  const [courses, setCourses] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchCourses = async () => {
+      try {
+        const res = await fetch("/api/courses"); // API backend
+        const data = await res.json();
+
+        // Nếu backend chưa có progress, gán mặc định 0
+        const coursesWithProgress = data.map((c) => ({
+          ...c,
+          progress: c.progress || 0,
+        }));
+
+        setCourses(coursesWithProgress);
+      } catch (err) {
+        console.error("Failed to fetch courses:", err);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchCourses();
+  }, []);
+
+  if (loading) return <Text>Loading courses...</Text>;
+
   const settings = {
     dots: false,
     infinite: courses.length > 3,
@@ -88,19 +85,15 @@ const InProgressCarousel = () => {
         breakpoint: 1024,
         settings: { slidesToShow: Math.min(2, courses.length) },
       },
-      {
-        breakpoint: 600,
-        settings: { slidesToShow: 1 },
-      },
+      { breakpoint: 600, settings: { slidesToShow: 1 } },
     ],
   };
 
-  // 🔥 fallback nếu ít course (giống component kia)
   if (courses.length <= 3) {
     return (
       <Box display="flex" gap={4}>
         {courses.map((course) => (
-          <Box key={course.id} w="250px">
+          <Box key={course._id} w="250px">
             <Box
               bg="white"
               borderRadius="lg"
@@ -110,7 +103,7 @@ const InProgressCarousel = () => {
               transition="0.3s"
             >
               <Image
-                src={course.image}
+                src={course.image || "https://picsum.photos/300/200"}
                 h="150px"
                 w="100%"
                 objectFit="cover"
@@ -122,7 +115,7 @@ const InProgressCarousel = () => {
                 </Text>
 
                 <Badge colorScheme="blue" mb={2}>
-                  {course.level}
+                  {course.level || "Beginner"}
                 </Badge>
 
                 <Progress
@@ -147,7 +140,7 @@ const InProgressCarousel = () => {
     <Box position="relative">
       <Slider {...settings}>
         {courses.map((course) => (
-          <Box key={course.id} p={2}>
+          <Box key={course._id} p={2}>
             <Box
               bg="white"
               borderRadius="lg"
@@ -157,7 +150,7 @@ const InProgressCarousel = () => {
               transition="0.3s"
             >
               <Image
-                src={course.image}
+                src={course.image || "https://picsum.photos/300/200"}
                 h="150px"
                 w="100%"
                 objectFit="cover"
@@ -169,7 +162,7 @@ const InProgressCarousel = () => {
                 </Text>
 
                 <Badge colorScheme="blue" mb={2}>
-                  {course.level}
+                  {course.level || "Beginner"}
                 </Badge>
 
                 <Progress

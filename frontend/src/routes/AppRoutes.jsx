@@ -28,6 +28,7 @@ import ClassListPage from "../pages/Class/ClassListPage";
 import ClassDetailPage from "../pages/Class/ClassDetailPage";
 import ManageClassPage from "../pages/Class/ManageClassPage";
 import InstructorDashboardPage from "../pages/Report/InstructorDashboardPage";
+import StudentDashboardPage from "../pages/Report/StudentDashboardPage";
 const AppRoutes = () => {
   return (
     <Routes>
@@ -45,6 +46,15 @@ const AppRoutes = () => {
       </Route>
 
       <Route path="/courses/:id" element={<CourseDetailPage />} />
+
+      <Route
+  path="/student-dashboard"
+  element={
+    <ProtectedRoute roles={["STUDENT"]}>
+      <StudentDashboardPage />
+    </ProtectedRoute>
+  }
+/>
 {/* CLASS LIST */}
 <Route
   path="/classes"
@@ -152,13 +162,13 @@ const AppRoutes = () => {
       />
 
       <Route
-        path="/certificate/:courseId"
-        element={
-          <ProtectedRoute role="STUDENT">
-            <CertificatePage />
-          </ProtectedRoute>
-        }
-      />
+  path="/certificates"
+  element={
+    <ProtectedRoute role="STUDENT">
+      <CertificatePage />
+    </ProtectedRoute>
+  }
+/>
 
       <Route
         path="/my-courses"
@@ -203,23 +213,28 @@ const AppRoutes = () => {
 
       {/* ================= ADMIN ================= */}
 
-      <Route
-        path="/admin/dashboard"
-        element={
-          <ProtectedRoute role="ADMIN">
-            <SystemOverviewPage />
-          </ProtectedRoute>
-        }
-      />
+      <Route path="/" element={<MainLayout />}>
+  <Route index element={<Home />} />
 
-      <Route
-        path="/admin/users"
-        element={
-          <ProtectedRoute role="ADMIN">
-            <UserManagementPage />
-          </ProtectedRoute>
-        }
-      />
+  <Route
+    path="admin/dashboard"
+    element={
+      <ProtectedRoute role="ADMIN">
+        <SystemOverviewPage />
+      </ProtectedRoute>
+    }
+  />
+
+  <Route
+    path="admin/users"
+    element={
+      <ProtectedRoute role="ADMIN">
+        <UserManagementPage />
+      </ProtectedRoute>
+    }
+  />
+
+</Route>
 
       <Route
         path="/admin"

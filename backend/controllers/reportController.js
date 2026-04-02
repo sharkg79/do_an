@@ -193,8 +193,52 @@ const getInstructorDashboard = async (req, res) => {
     res.status(500).json({ message: error.message });
   }
 };
+// ================= STUDENT DASHBOARD =================
+const getStudentDashboard = async (req, res) => {
+  try {
+    const studentId = req.user._id;
+
+    // Courses enrolled
+    const enrollments = await Enrollment.find({
+      student: studentId
+    }).populate("course");
+
+    const courseIds = enrollments.map(e => e.course._id);
+
+    // Assignments
+    const assignments = await Assignment.find({
+      course: { $in: courseIds }
+    });
+
+    // Submissions
+    const submissions = await Submission.find({
+      student: studentId
+    });
+
+    const completed = submissions.length;
+    const totalAssignments = assignments.length;
+
+    // continue learning
+    const courses = enrollments.map(e => ({
+      _id: e.course._id,
+      title: e.course.title,
+      thumbnail: e.course.thumbnail
+    }));
+
+    res.json({
+      totalCourses: enrollments.length,
+      totalAssignments,
+      completedAssignments: completed,
+      courses
+    });
+
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
 module.exports = {
   getDashboardSummary,
   getCourseProgress,
-  getInstructorDashboard
+  getInstructorDashboard,
+  getStudentDashboard
 };
