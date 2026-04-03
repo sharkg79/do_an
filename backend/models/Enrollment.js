@@ -15,7 +15,7 @@ const enrollmentSchema = new mongoose.Schema({
 class: {
   type: mongoose.Schema.Types.ObjectId,
   ref: "Class"
-}
+},
   isPaid: {
     type: Boolean,
     default: false

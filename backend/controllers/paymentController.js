@@ -2,12 +2,13 @@ const mongoose = require("mongoose");
 const Enrollment = require("../models/Enrollment");
 const Course = require("../models/Course");
 const Class = require("../models/Class");
+
 // ================= PAY COURSE =================
 const payCourse = async (req, res) => {
   try {
     const studentId = req.user._id;
     const { courseId } = req.params;
-    const { classId } = req.body; 
+    const { classId } = req.body;
 
     if (!mongoose.Types.ObjectId.isValid(courseId)) {
       return res.status(400).json({ message: "Invalid course ID" });
@@ -21,7 +22,7 @@ const payCourse = async (req, res) => {
     // check đã mua chưa
     let enrollment = await Enrollment.findOne({
       student: studentId,
-      course: courseId
+      course: courseId,
     });
 
     if (enrollment && enrollment.isPaid) {
@@ -33,46 +34,46 @@ const payCourse = async (req, res) => {
       enrollment = await Enrollment.create({
         student: studentId,
         course: courseId,
-        class: classId 
+        class: classId,
       });
     }
 
-    // FREE COURSE
+    // ================= FREE COURSE =================
     if (course.price === 0) {
-  enrollment.isPaid = true;
-  enrollment.paymentMethod = "FREE";
-  enrollment.paidAt = new Date();
-  await enrollment.save();
+      enrollment.isPaid = true;
+      enrollment.paymentMethod = "FREE";
+      enrollment.paidAt = new Date();
+      await enrollment.save();
 
-  // 🔥 tìm class của course
-  const cls = await Class.findOne({ course: courseId });
+      // tìm class
+      const cls = await Class.findOne({ course: courseId });
 
-  if (!cls) {
-    return res.status(404).json({
-      message: "No class available for this course"
-    });
-  }
+      if (!cls) {
+        return res.status(404).json({
+          message: "No class available for this course",
+        });
+      }
 
-  // thêm student vào class
-if (!cls.students.includes(studentId)) {
-  cls.students.push(studentId);
-  await cls.save();
-}
+      // thêm student vào class
+      if (!cls.students.includes(studentId)) {
+        cls.students.push(studentId);
+        await cls.save();
+      }
 
-return res.json({
-  message: "Enroll success",
-  enrollment,
-  classId: cls._id // 🔥 quan trọng
-});
-}
+      return res.json({
+        message: "Enroll success",
+        enrollment,
+        classId: cls._id,
+      });
+    }
 
-    // FAKE PAYMENT URL
+    // ================= FAKE PAYMENT =================
     const paymentUrl = `https://fake-payment.com?enrollmentId=${enrollment._id}&classId=${classId}&amount=${course.price}`;
+
     res.json({
       message: "Redirect to payment",
-      paymentUrl
+      paymentUrl,
     });
-
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
@@ -93,12 +94,12 @@ const confirmPayment = async (req, res) => {
       return res.status(404).json({ message: "Enrollment not found" });
     }
 
-    // ❗ nếu đã paid thì không xử lý lại
+    // nếu đã paid thì bỏ qua
     if (enrollment.isPaid) {
       return res.json({ message: "Already confirmed", enrollment });
     }
 
-    // ❗ kiểm tra status
+    // check trạng thái payment
     if (status !== "success") {
       return res.status(400).json({ message: "Payment failed" });
     }
@@ -111,22 +112,24 @@ const confirmPayment = async (req, res) => {
 
     await enrollment.save();
 
+    // ✅ thêm student vào class (FIX LỖI Ở ĐÂY)
+    const cls = await Class.findById(enrollment.class);
+
+    if (cls && !cls.students.includes(enrollment.student)) {
+      cls.students.push(enrollment.student);
+      await cls.save();
+    }
+
     res.json({
       message: "Payment confirmed",
-      enrollment
+      enrollment,
     });
-
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
 };
-const cls = await Class.findById(enrollment.class);
 
-if (!cls.students.includes(enrollment.student)) {
-  cls.students.push(enrollment.student);
-  await cls.save();
-}
 module.exports = {
   payCourse,
-  confirmPayment
+  confirmPayment,
 };
