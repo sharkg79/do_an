@@ -1,152 +1,178 @@
-import React, { useState } from "react";
-import axios from "axios";
-import "./CreateCoursePage.css";
-import Navbar from "../../components/Navbar";
+import {
+  Box,
+  Heading,
+  Input,
+  Button,
+  Grid,
+  useToast,
+  Spinner,
+  Textarea,
+} from "@chakra-ui/react";
+
+import { useEffect, useState } from "react";
+import { useNavigate, useParams } from "react-router-dom";
+import axiosInstance from "../../api/axios";
 
 const CreateCoursePage = () => {
+  const { id } = useParams(); // 👈 dùng cho update
+  const isEdit = !!id;
+
   const [form, setForm] = useState({
     title: "",
     description: "",
-    category: "beginner",
-    level: "Beginner",
-    price: 0,
-    image: ""
+    price: "",
   });
 
   const [loading, setLoading] = useState(false);
-  const [message, setMessage] = useState("");
+  const [loadingData, setLoadingData] = useState(isEdit);
 
-  const handleChange = (e) => {
-    setForm({
-      ...form,
-      [e.target.name]: e.target.value
-    });
+  const toast = useToast();
+  const navigate = useNavigate();
+
+  // ================= FETCH COURSE (EDIT MODE) =================
+  const fetchCourse = async () => {
+    try {
+      const res = await axiosInstance.get(`/api/courses/${id}`);
+      const data = res.data.course || res.data;
+
+      setForm({
+        title: data?.title || "",
+        description: data?.description || "",
+        price: data?.price || "",
+      });
+    } catch (err) {
+      toast({
+        title: "Load course failed",
+        status: "error",
+      });
+    } finally {
+      setLoadingData(false);
+    }
   };
 
+  useEffect(() => {
+    if (isEdit) fetchCourse();
+  }, [id]);
+
+  // ================= HANDLE SUBMIT =================
   const handleSubmit = async (e) => {
     e.preventDefault();
+
+    if (!form.title) {
+      toast({
+        title: "Title is required",
+        status: "warning",
+      });
+      return;
+    }
+
+    if (form.price && Number(form.price) < 0) {
+      toast({
+        title: "Price must be >= 0",
+        status: "error",
+      });
+      return;
+    }
+
     setLoading(true);
-    setMessage("");
 
     try {
-      const token = localStorage.getItem("token");
+      if (isEdit) {
+        await axiosInstance.put(`/api/courses/${id}`, form);
 
-      const res = await axios.post(
-        "http://localhost:5000/api/courses",
-        {
-          ...form,
-        },
-        {
-          headers: {
-            Authorization: `Bearer ${token}`
-          }
-        }
-      );
+        toast({
+          title: "Course updated successfully",
+          status: "success",
+        });
+      } else {
+        await axiosInstance.post("/api/courses", form);
 
-      setMessage("✅ Course created successfully!");
-      setForm({
-        title: "",
-        description: "",
-        category: "beginner",
-        level: "Beginner",
-        price: 0,
-        image: ""
-      });
+        toast({
+          title: "Course created successfully",
+          status: "success",
+        });
+      }
 
+      navigate("/instructor/courses");
     } catch (err) {
       console.error(err);
-      setMessage("❌ Failed to create course");
+
+      toast({
+        title:
+          err.response?.data?.message ||
+          (isEdit ? "Update failed" : "Create failed"),
+        status: "error",
+      });
     } finally {
       setLoading(false);
     }
   };
 
-  return (
-    <box>
-  <Navbar />
-    <div className="create-course-page">
-      <div className="container">
-        <h1 className="title">Create New Course</h1>
+  // ================= LOADING =================
+  if (loadingData) {
+    return (
+      <Box textAlign="center" mt={10}>
+        <Spinner size="lg" />
+      </Box>
+    );
+  }
 
-        <form className="card" onSubmit={handleSubmit}>
-          <div className="form-group">
-            <label>Course Title</label>
-            <input
-              type="text"
-              name="title"
+  // ================= UI =================
+  return (
+    <Box maxW="700px" mx="auto" mt={10}>
+      <Heading size="lg" mb={6}>
+        {isEdit ? "Update Course" : "Create New Course"}
+      </Heading>
+
+      <Box bg="white" p={6} borderRadius="lg" boxShadow="md">
+        <form onSubmit={handleSubmit}>
+          <Grid templateColumns="1fr" gap={4}>
+            {/* TITLE */}
+            <Input
+              placeholder="Course title"
               value={form.title}
-              onChange={handleChange}
-              placeholder="Enter course title..."
+              onChange={(e) =>
+                setForm({ ...form, title: e.target.value })
+              }
               required
             />
-          </div>
 
-          <div className="form-group">
-            <label>Description</label>
-            <textarea
-              name="description"
+            {/* DESCRIPTION */}
+            <Textarea
+              placeholder="Course description"
               value={form.description}
-              onChange={handleChange}
-              placeholder="Describe your course..."
-              rows={4}
+              onChange={(e) =>
+                setForm({ ...form, description: e.target.value })
+              }
             />
-          </div>
 
-          <div className="form-group">
-            <label>Category</label>
-            <select name="category" value={form.category} onChange={handleChange}>
-              <option value="ielts">IELTS</option>
-              <option value="toeic">TOEIC</option>
-              <option value="business">Business</option>
-              <option value="beginner">Beginner</option>
-              <option value="speaking">Speaking</option>
-              <option value="writing">Writing</option>
-              <option value="listening">Listening</option>
-              <option value="reading">Reading</option>
-              
-            </select>
-          </div>
-
-          <div className="form-group">
-            <label>Level</label>
-            <select name="level" value={form.level} onChange={handleChange}>
-              <option value="Beginner">Beginner</option>
-              <option value="Intermediate">Intermediate</option>
-              <option value="Advanced">Advanced</option>
-            </select>
-          </div>
-
-          <div className="form-group">
-            <label>Price ($)</label>
-            <input
+            {/* PRICE */}
+            <Input
               type="number"
-              name="price"
+              placeholder="Price"
               value={form.price}
-              onChange={handleChange}
-              placeholder="Enter price"
+              onChange={(e) =>
+                setForm({ ...form, price: e.target.value })
+              }
             />
-          </div>
 
-          <div className="form-group">
-            <label>Image URL</label>
-            <input
-              type="text"
-              name="image"
-              value={form.image}
-              onChange={handleChange}
-              placeholder="Enter image URL (optional)"
-            />
-          </div>
+            {/* SUBMIT */}
+            <Button
+              colorScheme="teal"
+              type="submit"
+              isLoading={loading}
+            >
+              {isEdit ? "Update Course" : "Create Course"}
+            </Button>
 
-          <button className="btn-primary" disabled={loading}>
-            {loading ? "Creating..." : "Create Course"}
-          </button>
-
-          {message && <p className="message">{message}</p>}
+            {/* CANCEL */}
+            <Button variant="outline" onClick={() => navigate(-1)}>
+              Cancel
+            </Button>
+          </Grid>
         </form>
-      </div>
-    </div>
-    </box>
+      </Box>
+    </Box>
   );
 };
 

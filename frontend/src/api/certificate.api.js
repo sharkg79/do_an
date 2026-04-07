@@ -14,3 +14,20 @@ export const getMyCertificatesAPI = async () => {
   const res = await axiosInstance.get("/api/certificates/my");
   return res.data;
 };
+// ================= CREATE =================
+export const createCertificateAPI = async (data) => {
+  const res = await axiosInstance.post("/api/certificates", data);
+  return res.data;
+};
+
+// ================= GET ALL =================
+export const getAllCertificatesAPI = async () => {
+  const res = await axiosInstance.get("/api/certificates");
+  return res.data;
+};
+
+// ================= DELETE =================
+export const deleteCertificateAPI = async (id) => {
+  const res = await axiosInstance.delete(`/api/certificates/${id}`);
+  return res.data;
+};

@@ -10,7 +10,9 @@ const {
   deleteTest,
   getTestsByCourse,
   submitTest,
-  getSubmissions
+  getSubmissions,
+  deleteSubmission,
+  getAllTests,
 } = require("../controllers/testController");
 
 // CREATE
@@ -30,4 +32,11 @@ router.post("/:testId/submit", auth, role(["STUDENT"]), submitTest);
 // GET SUBMISSIONS
 router.get("/:testId/submissions", auth, role(["INSTRUCTOR", "ADMIN"]), getSubmissions);
 
+router.delete(
+  "/submissions/:id",
+  auth,
+  role(["INSTRUCTOR", "ADMIN"]),
+  deleteSubmission
+);
+router.get("/", auth, role(["ADMIN", "INSTRUCTOR"]), getAllTests);
 module.exports = router;

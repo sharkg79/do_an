@@ -39,9 +39,11 @@ const Login = () => {
 
     // ✅ điều hướng đúng
     if (res.user.role === "ADMIN") {
-      navigate("/admin/dashboard", { replace: true });
-    } else {
-      navigate("/", { replace: true });
+      navigate("/dashboard/admin-overview", { replace: true });
+    } else if (res.user.role === "INSTRUCTOR") {
+      navigate("/dashboard/instructor-overview", { replace: true });
+    } else if (res.user.role === "STUDENT") {
+      navigate("/student-dashboard", { replace: true });
     }
 
   } catch (err) {

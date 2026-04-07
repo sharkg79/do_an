@@ -7,7 +7,7 @@ const Enrollment = require("../models/Enrollment");
 // ================= CREATE =================
 const createTest = async (req, res) => {
   try {
-    const { title, course, questions, totalMarks, dueDate } = req.body;
+    const { title, course,class: classId, questions, totalMarks, dueDate } = req.body;
 
     if (!mongoose.Types.ObjectId.isValid(course)) {
       return res.status(400).json({ message: "Invalid course ID" });
@@ -31,6 +31,7 @@ const createTest = async (req, res) => {
       title,
       course,
       instructor: req.user._id,
+      class: classId,
       questions,
       totalMarks,
       dueDate
@@ -261,6 +262,55 @@ const getTestById = async (req, res) => {
     res.status(500).json({ message: err.message });
   }
 };
+// ================= DELETE SUBMISSION =================
+const deleteSubmission = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const submission = await TestSubmission.findById(id).populate("test");
+
+    if (!submission) {
+      return res.status(404).json({ message: "Submission not found" });
+    }
+
+    // check quyền instructor
+    if (
+      req.user.role === "INSTRUCTOR" &&
+      submission.test.instructor.toString() !== req.user._id.toString()
+    ) {
+      return res.status(403).json({ message: "Not your test" });
+    }
+
+    await submission.deleteOne();
+
+    res.json({ message: "Submission deleted" });
+
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+};
+const getAllTests = async (req, res) => {
+  try {
+    let tests;
+
+    if (req.user.role === "INSTRUCTOR") {
+      tests = await Test.find({ instructor: req.user._id })
+        .populate("course", "title")
+        .populate("class", "name");
+    } else {
+      // ADMIN
+      tests = await Test.find()
+        .populate("course", "title")
+        .populate("class", "name")
+        .populate("instructor", "name");
+    }
+
+    res.json(tests);
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+};
+
 module.exports = {
   createTest,
   updateTest,
@@ -268,5 +318,7 @@ module.exports = {
   getTestsByCourse,
   submitTest,
   getSubmissions,
-  getTestById
+  getTestById,
+  deleteSubmission,
+  getAllTests
 };

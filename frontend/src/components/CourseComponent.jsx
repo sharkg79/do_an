@@ -1,11 +1,9 @@
 import React from "react";
 import { Box, Heading, Stack } from "@chakra-ui/react";
 import HomePageCarousel from "./HomePageCarousel";
-import InProgressCarousel from "./InProgressCarousel";
 
 const sections = [
   { title: "All English Courses", type: "all" },
-  { title: "Your Learning Progress", type: "progress" },
 
   // Theo kỹ năng
   { title: "Top Courses in Speaking", type: "speaking" },
@@ -28,12 +26,8 @@ const CourseComponent = () => {
           <Heading as="h2" size="lg">
             {section.title}
           </Heading>
-
-          {section.type === "progress" ? (
-            <InProgressCarousel />
-          ) : (
             <HomePageCarousel category={section.type} />
-          )}
+
         </Stack>
       ))}
     </Box>

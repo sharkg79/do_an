@@ -6,7 +6,9 @@ const role = require("../middlewares/role");
 
 const {
   payCourse,
-  confirmPayment
+  confirmPayment,
+  getAllPayments,
+  
 } = require("../controllers/paymentController");
 
 // STUDENT PAY
@@ -15,4 +17,5 @@ router.post("/:courseId/pay", auth, role(["STUDENT"]), payCourse);
 // PAYMENT CALLBACK (KHÔNG auth vì gateway gọi)
 router.post("/confirm", confirmPayment);
 
+router.get("/", auth, role(["ADMIN"]), getAllPayments);
 module.exports = router;

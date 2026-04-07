@@ -10,12 +10,15 @@ export const payCourseAPI = async (courseId) => {
 };
 
 // ====================== CONFIRM PAYMENT ======================
-// ⚠️ Thường không gọi từ frontend (gateway gọi)
-// nhưng vẫn viết để test nếu cần
 export const confirmPaymentAPI = async (data) => {
   const res = await axiosInstance.post(
     "/api/payments/confirm",
     data
   );
+  return res.data;
+};
+// ================= GET ALL PAYMENTS =================
+export const getPaymentsAPI = async () => {
+  const res = await axiosInstance.get("/api/payments");
   return res.data;
 };

@@ -48,3 +48,13 @@ export const getTestSubmissionsAPI = async (testId) => {
   );
   return res.data;
 };
+export const deleteTestSubmissionAPI = async (id) => {
+  const res = await axiosInstance.delete(
+    `/api/tests/submissions/${id}`
+  );
+  return res.data;
+};
+export const getAllTestsAPI = async () => {
+  const res = await axiosInstance.get("/api/tests");
+  return res.data;
+};

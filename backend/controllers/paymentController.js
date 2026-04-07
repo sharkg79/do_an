@@ -128,8 +128,21 @@ const confirmPayment = async (req, res) => {
     res.status(500).json({ message: error.message });
   }
 };
+// ================= GET ALL PAYMENTS (ADMIN) =================
+const getAllPayments = async (req, res) => {
+  try {
+    const enrollments = await Enrollment.find()
+      .populate("student", "name email")
+      .populate("course", "title price")
+      .sort({ createdAt: -1 });
 
+    res.json(enrollments);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
 module.exports = {
   payCourse,
   confirmPayment,
+  getAllPayments,
 };

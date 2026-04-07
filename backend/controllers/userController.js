@@ -2,12 +2,21 @@ const mongoose = require("mongoose");
 const User = require("../models/User");
 
 // ================= GET ALL USERS =================
-const getUsers = async (req, res) => {
+// controllers/userController.js
+const getAllUsers = async (req, res) => {
   try {
-    const users = await User.find().select("-password");
+    const { role } = req.query;
+
+    let filter = {};
+
+    // 👇 LỌC THEO ROLE
+    if (role) {
+      filter.role = role;
+    }
+
+    const users = await User.find(filter).select("name email role");
 
     res.json(users);
-
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
@@ -67,7 +76,7 @@ const updateUserRole = async (req, res) => {
 };
 
 module.exports = {
-  getUsers,
+  getAllUsers,
   deleteUser,
   updateUserRole
 };

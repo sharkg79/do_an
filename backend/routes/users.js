@@ -5,7 +5,7 @@ const auth = require("../middlewares/auth");
 const role = require("../middlewares/role");
 
 const {
-  getUsers,
+  getAllUsers,
   deleteUser,
   updateUserRole
 } = require("../controllers/userController");
@@ -13,7 +13,7 @@ const {
 // 👑 ADMIN ONLY
 
 // GET ALL USERS
-router.get("/", auth, role(["ADMIN"]), getUsers);
+router.get("/", auth, role(["ADMIN"]), getAllUsers);
 
 // DELETE USER
 router.delete("/:userId", auth, role(["ADMIN"]), deleteUser);

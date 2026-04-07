@@ -6,8 +6,12 @@ const Course = require("../models/Course");
 // CREATE CLASS
 const createClass = async (req, res) => {
   try {
-    const { course, title, startDate, endDate } = req.body;
-    const instructor = req.user._id;
+    const { course, title, startDate, endDate, instructor } = req.body;
+    let instructorId = req.user._id;
+
+if (req.user.role === "ADMIN" && instructor) {
+  instructorId = instructor;
+}
 
     if (!mongoose.Types.ObjectId.isValid(course)) {
       return res.status(400).json({ message: "Invalid course ID" });

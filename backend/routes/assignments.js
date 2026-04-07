@@ -3,30 +3,48 @@ const router = express.Router();
 
 const {
   createAssignment,
-  getAssignmentsByCourse,
+  getAssignments, // ✅ đổi API
   updateAssignment,
   deleteAssignment,
   submitAssignment,
-  gradeSubmission
+  gradeSubmission,
+  getSubmissionsByAssignment, // ✅ API mới
 } = require("../controllers/assignmentController");
 
 const auth = require("../middlewares/auth");
 const role = require("../middlewares/role");
 const upload = require("../middlewares/upload");
 
-// CREATE
+// ================= CREATE =================
 router.post("/", auth, role(["INSTRUCTOR", "ADMIN"]), createAssignment);
 
-// GET
-router.get("/course/:courseId", auth, getAssignmentsByCourse);
+// ================= GET ALL / MY =================
+// admin: tất cả
+// instructor: assignment của mình
+router.get(
+  "/",
+  auth,
+  role(["ADMIN", "INSTRUCTOR"]), // ✅ chặn STUDENT từ đầu
+  getAssignments
+);
 
-// UPDATE
-router.put("/:assignmentId", auth, role(["INSTRUCTOR", "ADMIN"]), updateAssignment);
+// ================= UPDATE =================
+router.put(
+  "/:assignmentId",
+  auth,
+  role(["INSTRUCTOR", "ADMIN"]),
+  updateAssignment
+);
 
-// DELETE
-router.delete("/:assignmentId", auth, role(["INSTRUCTOR", "ADMIN"]), deleteAssignment);
+// ================= DELETE =================
+router.delete(
+  "/:assignmentId",
+  auth,
+  role(["INSTRUCTOR", "ADMIN"]),
+  deleteAssignment
+);
 
-// SUBMIT (STUDENT)
+// ================= SUBMIT =================
 router.post(
   "/:assignmentId/submit",
   auth,
@@ -35,7 +53,7 @@ router.post(
   submitAssignment
 );
 
-// GRADE
+// ================= GRADE =================
 router.put(
   "/submission/:submissionId/grade",
   auth,
@@ -43,4 +61,10 @@ router.put(
   gradeSubmission
 );
 
+router.get(
+  "/:assignmentId/submissions",
+  auth,
+  role(["INSTRUCTOR", "ADMIN"]),
+  getSubmissionsByAssignment
+);
 module.exports = router;

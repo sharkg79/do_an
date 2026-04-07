@@ -1,110 +1,202 @@
-import React, { useEffect, useState } from "react";
-import axios from "axios";
-import { useParams } from "react-router-dom";
-import "./ManageTestPage.css";
+import {
+  Box,
+  Heading,
+  Button,
+  SimpleGrid,
+  Text,
+  Flex,
+  Spinner,
+  useToast,
+  Input,
+  Badge,
+} from "@chakra-ui/react";
+
+import { useEffect, useState } from "react";
+import {
+  getAllTestsAPI,
+  deleteTestAPI,
+} from "../../api/test.api";
+
+import axiosInstance from "../../api/axios";
+import { useNavigate } from "react-router-dom";
 
 const ManageTestPage = () => {
-  const { courseId } = useParams();
   const [tests, setTests] = useState([]);
+  const [filteredTests, setFilteredTests] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [search, setSearch] = useState("");
 
-  const token = localStorage.getItem("token");
+  const [user, setUser] = useState(null); // ✅ thêm
 
+  const navigate = useNavigate();
+  const toast = useToast();
+
+  // ================= GET USER =================
+  const fetchUser = async () => {
+    try {
+      const res = await axiosInstance.get("/api/auth/me");
+      setUser(res.data);
+    } catch (err) {
+      console.error("Fetch user error:", err);
+    }
+  };
+
+  // ================= FETCH TESTS =================
   const fetchTests = async () => {
     try {
-      const res = await axios.get(
-        `http://localhost:5000/api/tests/course/${courseId}`,
-        {
-          headers: {
-            Authorization: `Bearer ${token}`
-          }
-        }
-      );
-
-      setTests(res.data);
+      const data = await getAllTestsAPI();
+      setTests(data);
+      setFilteredTests(data);
     } catch (err) {
       console.error(err);
+      toast({
+        title: "Error loading tests",
+        status: "error",
+      });
     } finally {
       setLoading(false);
     }
   };
 
+  useEffect(() => {
+    fetchUser();   // ✅ gọi user
+    fetchTests();
+  }, []);
+
+  // ================= SEARCH =================
+  useEffect(() => {
+    const filtered = tests.filter((t) =>
+      t.title.toLowerCase().includes(search.toLowerCase())
+    );
+    setFilteredTests(filtered);
+  }, [search, tests]);
+
+  // ================= DELETE =================
   const handleDelete = async (id) => {
     if (!window.confirm("Delete this test?")) return;
 
     try {
-      await axios.delete(
-        `http://localhost:5000/api/tests/${id}`,
-        {
-          headers: {
-            Authorization: `Bearer ${token}`
-          }
-        }
-      );
+      await deleteTestAPI(id);
 
-      setTests(tests.filter((t) => t._id !== id));
+      const updated = tests.filter((t) => t._id !== id);
+      setTests(updated);
+      setFilteredTests(updated);
+
+      toast({
+        title: "Test deleted",
+        status: "success",
+      });
     } catch (err) {
       console.error(err);
+      toast({
+        title: "Delete failed",
+        status: "error",
+      });
     }
   };
 
-  useEffect(() => {
-    fetchTests();
-  }, [courseId]);
-
+  // ================= UI =================
   return (
-    <div className="test-page">
-      <div className="container">
+    <Box>
+      {/* HEADER */}
+      <Flex justify="space-between" align="center" mb={6}>
+        <Heading size="lg">Manage Tests</Heading>
 
-        <div className="header">
-          <h1>Manage Tests</h1>
-          <button className="btn-add">+ Create Test</button>
-        </div>
-
-        {loading ? (
-          <p>Loading...</p>
-        ) : tests.length === 0 ? (
-          <p>No tests yet</p>
-        ) : (
-          <div className="test-list">
-            {tests.map((test, index) => (
-              <div className="test-card" key={test._id}>
-
-                <div className="left">
-                  <span className="index">{index + 1}</span>
-
-                  <div>
-                    <h3>{test.title}</h3>
-
-                    <div className="meta">
-                      <span>Questions: {test.questions?.length || 0}</span>
-                      <span>Marks: {test.totalMarks}</span>
-                    </div>
-
-                    <span className="due">
-                      Due: {test.dueDate ? new Date(test.dueDate).toLocaleDateString() : "No deadline"}
-                    </span>
-                  </div>
-                </div>
-
-                <div className="right">
-                  <button className="btn-edit">Edit</button>
-                  <button className="btn-view">Submissions</button>
-                  <button
-                    className="btn-delete"
-                    onClick={() => handleDelete(test._id)}
-                  >
-                    Delete
-                  </button>
-                </div>
-
-              </div>
-            ))}
-          </div>
+        {/* chỉ instructor mới tạo */}
+        {user?.role === "INSTRUCTOR" && (
+          <Button
+            colorScheme="blue"
+            onClick={() => navigate("/dashboard/create-test")}
+          >
+            + Create Test
+          </Button>
         )}
+      </Flex>
 
-      </div>
-    </div>
+      {/* SEARCH */}
+      <Input
+        placeholder="Search test..."
+        mb={6}
+        value={search}
+        onChange={(e) => setSearch(e.target.value)}
+      />
+
+      {/* CONTENT */}
+      {loading ? (
+        <Flex justify="center" mt={10}>
+          <Spinner size="lg" />
+        </Flex>
+      ) : filteredTests.length === 0 ? (
+        <Text>No tests found</Text>
+      ) : (
+        <SimpleGrid columns={[1, 2, 3]} spacing={6}>
+          {filteredTests.map((test) => (
+            <Box
+              key={test._id}
+              bg="white"
+              p={5}
+              borderRadius="lg"
+              boxShadow="md"
+            >
+              <Heading size="md" mb={2}>
+                {test.title}
+              </Heading>
+
+              <Text fontSize="sm" color="gray.600">
+                Course: {test.course?.title}
+              </Text>
+
+              <Text fontSize="sm" color="gray.600" mb={2}>
+                Instructor: {test.instructor?.name || "N/A"}
+              </Text>
+
+              <Badge colorScheme="purple" mb={3}>
+                {test.questions?.length || 0} questions
+              </Badge>
+
+              <Text fontWeight="bold" mb={4}>
+                Total: {test.totalMarks} marks
+              </Text>
+
+              <Flex gap={2} wrap="wrap">
+                {/* EDIT - chỉ instructor */}
+                {user?.role === "INSTRUCTOR" && (
+                  <Button
+                    size="sm"
+                    colorScheme="yellow"
+                    onClick={() =>
+                      navigate(`/dashboard/tests/${test._id}`)
+                    }
+                  >
+                    Edit
+                  </Button>
+                )}
+
+                {/* DELETE */}
+                <Button
+                  size="sm"
+                  colorScheme="red"
+                  onClick={() => handleDelete(test._id)}
+                >
+                  Delete
+                </Button>
+
+                {/* SUBMISSIONS */}
+                <Button
+                  size="sm"
+                  colorScheme="purple"
+                  onClick={() =>
+                    navigate(`/dashboard/test-submissions?testId=${test._id}`)
+                  }
+                >
+                  Submissions
+                </Button>
+              </Flex>
+            </Box>
+          ))}
+        </SimpleGrid>
+      )}
+    </Box>
   );
 };
 

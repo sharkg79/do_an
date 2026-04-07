@@ -3,7 +3,8 @@ const router = express.Router();
 
 const {
   createLesson,
-  getLessonsByCourse,
+  getLessonsByClass,
+  getAllLessons,
   updateLesson,
   deleteLesson
 } = require("../controllers/lessonController");
@@ -34,9 +35,10 @@ router.post(
   createLesson
 );
 
-// GET BY COURSE
-router.get("/course/:courseId", auth, getLessonsByCourse);
-
+// GET BY CLASS
+router.get("/class/:classId", auth, getLessonsByClass);
+// GET ALL
+router.get("/", auth, getAllLessons);
 // UPDATE
 router.put(
   "/:lessonId",

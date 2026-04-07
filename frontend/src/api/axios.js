@@ -4,6 +4,7 @@ const instance = axios.create({
   baseURL: process.env.REACT_APP_API_URL || "http://localhost:5000",
 });
 
+// ================= REQUEST =================
 instance.interceptors.request.use((config) => {
   const token = localStorage.getItem("token");
 
@@ -11,18 +12,34 @@ instance.interceptors.request.use((config) => {
     config.headers.Authorization = `Bearer ${token}`;
   }
 
-  config.headers["Content-Type"] = "application/json";
+  // Không set Content-Type nếu là FormData
+  if (config.data instanceof FormData) {
+    delete config.headers["Content-Type"];
+  }
 
   return config;
 });
 
+// ================= RESPONSE =================
 instance.interceptors.response.use(
   (res) => res,
   (err) => {
-    if (err.response?.status === 401) {
-      localStorage.clear();
-      window.location.href = "/login";
+    const originalRequest = err.config;
+
+    // Nếu 401 và chưa retry
+    if (err.response?.status === 401 && !originalRequest._retry) {
+      originalRequest._retry = true;
+
+      // Xóa riêng auth
+      localStorage.removeItem("token");
+      localStorage.removeItem("user");
+
+      // Tránh redirect loop
+      if (window.location.pathname !== "/login") {
+        window.location.href = "/login";
+      }
     }
+
     return Promise.reject(err);
   }
 );

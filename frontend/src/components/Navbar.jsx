@@ -91,22 +91,16 @@ const Navbar = () => {
             {/* Role-based */}
             {role === "ADMIN" && (
               <>
-                <MenuItem onClick={() => navigate("admin/dashboard")}>
+                <MenuItem onClick={() => navigate("dashboard/admin-overview")}>
                   Dashboard
-                </MenuItem>
-                <MenuItem onClick={() => navigate("/admin/users")}>
-                  Manage Users
                 </MenuItem>
               </>
             )}
 
             {role === "INSTRUCTOR" && (
               <>
-                <MenuItem onClick={() => navigate("/teacher/courses")}>
-                  My Courses
-                </MenuItem>
-                <MenuItem onClick={() => navigate("/instructor/create-course")}>
-                  Create Course
+                <MenuItem onClick={() => navigate("dashboard/instructor-overview")}>
+                  Dashboard
                 </MenuItem>
               </>
             )}

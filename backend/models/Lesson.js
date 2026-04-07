@@ -4,12 +4,6 @@ const lessonSchema = new mongoose.Schema({
   title: { type: String, required: true },
   description: { type: String },
 
-  course: {
-    type: mongoose.Schema.Types.ObjectId,
-    ref: "Course",
-    required: true
-  },
-
   instructor: {
     type: mongoose.Schema.Types.ObjectId,
     ref: "User",

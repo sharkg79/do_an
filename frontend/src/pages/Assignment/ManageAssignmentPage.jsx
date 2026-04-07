@@ -1,106 +1,217 @@
-import React, { useEffect, useState } from "react";
-import axios from "axios";
-import { useParams } from "react-router-dom";
-import "./ManageAssignmentPage.css";
+import {
+  Box,
+  Heading,
+  Button,
+  SimpleGrid,
+  Text,
+  Flex,
+  Spinner,
+  useToast,
+  Input,
+} from "@chakra-ui/react";
+
+import { useEffect, useState } from "react";
+import {
+  getAssignmentsAPI,
+  deleteAssignmentAPI,
+} from "../../api/assignment.api";
+
+import { useNavigate, useParams } from "react-router-dom";
+import { useAuth } from "../../context/AuthContext";
 
 const ManageAssignmentPage = () => {
-  const { courseId } = useParams();
+  const { classId } = useParams(); // ✅ FIX
   const [assignments, setAssignments] = useState([]);
+  const [filteredAssignments, setFilteredAssignments] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [search, setSearch] = useState("");
 
-  const token = localStorage.getItem("token");
+  const { user, loading: authLoading } = useAuth();
 
+  const navigate = useNavigate();
+  const toast = useToast();
+
+  // ================= FETCH =================
   const fetchAssignments = async () => {
     try {
-      const res = await axios.get(
-        `http://localhost:5000/api/assignments/course/${courseId}`,
-        {
-          headers: {
-            Authorization: `Bearer ${token}`
-          }
-        }
+      const data = await getAssignmentsAPI();
+
+      // ✅ FILTER theo class
+      const filtered = data.filter(
+        (a) => a.classId?.toString() === classId
       );
 
-      setAssignments(res.data);
+      setAssignments(filtered);
+      setFilteredAssignments(filtered);
     } catch (err) {
       console.error(err);
+      toast({
+        title: err.message || "Error loading assignments",
+        status: "error",
+      });
     } finally {
       setLoading(false);
     }
   };
 
+  useEffect(() => {
+    if (classId) fetchAssignments();
+  }, [classId]);
+
+  // ================= SEARCH =================
+  useEffect(() => {
+    const filtered = assignments.filter((a) =>
+      a.title.toLowerCase().includes(search.toLowerCase())
+    );
+    setFilteredAssignments(filtered);
+  }, [search, assignments]);
+
+  // ================= DELETE =================
   const handleDelete = async (id) => {
     if (!window.confirm("Delete this assignment?")) return;
 
     try {
-      await axios.delete(
-        `http://localhost:5000/api/assignments/${id}`,
-        {
-          headers: {
-            Authorization: `Bearer ${token}`
-          }
-        }
-      );
+      await deleteAssignmentAPI(id);
 
-      setAssignments(assignments.filter((a) => a._id !== id));
+      const updated = assignments.filter((a) => a._id !== id);
+      setAssignments(updated);
+      setFilteredAssignments(updated);
+
+      toast({
+        title: "Assignment deleted",
+        status: "success",
+      });
     } catch (err) {
-      console.error(err);
+      toast({
+        title: err.message || "Delete failed",
+        status: "error",
+      });
     }
   };
 
-  useEffect(() => {
-    fetchAssignments();
-  }, [courseId]);
+  // ================= PERMISSION =================
+  const canEdit = (assignment) => {
+    if (user?.role?.toUpperCase() === "ADMIN") return true;
+
+    if (user?.role?.toUpperCase() === "INSTRUCTOR") {
+      return (
+        assignment.instructor?._id?.toString() ===
+        user._id?.toString()
+      );
+    }
+
+    return false;
+  };
+
+  // ================= LOADING =================
+  if (loading || authLoading) {
+    return (
+      <Flex justify="center" mt={10}>
+        <Spinner size="lg" />
+      </Flex>
+    );
+  }
 
   return (
-    <div className="assignment-page">
-      <div className="container">
+    <Box>
+      {/* HEADER */}
+      <Flex justify="space-between" align="center" mb={6}>
+        <Heading size="lg">Manage Assignments</Heading>
 
-        <div className="header">
-          <h1>Manage Assignments</h1>
-          <button className="btn-add">+ Add Assignment</button>
-        </div>
-
-        {loading ? (
-          <p>Loading...</p>
-        ) : assignments.length === 0 ? (
-          <p>No assignments yet</p>
-        ) : (
-          <div className="assignment-list">
-            {assignments.map((a, index) => (
-              <div className="assignment-card" key={a._id}>
-
-                <div className="left">
-                  <span className="index">{index + 1}</span>
-
-                  <div>
-                    <h3>{a.title}</h3>
-                    <p>{a.description}</p>
-
-                    <span className="due">
-                      Due: {a.dueDate ? new Date(a.dueDate).toLocaleDateString() : "No deadline"}
-                    </span>
-                  </div>
-                </div>
-
-                <div className="right">
-                  <button className="btn-edit">Edit</button>
-                  <button className="btn-view">Submissions</button>
-                  <button
-                    className="btn-delete"
-                    onClick={() => handleDelete(a._id)}
-                  >
-                    Delete
-                  </button>
-                </div>
-
-              </div>
-            ))}
-          </div>
+        {(user?.role?.toUpperCase() === "INSTRUCTOR" ||
+          user?.role?.toUpperCase() === "ADMIN") && (
+          <Button
+            colorScheme="blue"
+            onClick={() =>
+              navigate(`/dashboard/create-assignment/${classId}`) // ✅ FIX
+            }
+          >
+            + Create Assignment
+          </Button>
         )}
+      </Flex>
 
-      </div>
-    </div>
+      {/* SEARCH */}
+      <Input
+        placeholder="Search assignment..."
+        mb={6}
+        value={search}
+        onChange={(e) => setSearch(e.target.value)}
+      />
+
+      {/* CONTENT */}
+      {filteredAssignments.length === 0 ? (
+        <Text>No assignments found</Text>
+      ) : (
+        <SimpleGrid columns={[1, 2, 3]} spacing={6}>
+          {filteredAssignments.map((assignment) => (
+            <Box
+              key={assignment._id}
+              bg="white"
+              p={5}
+              borderRadius="lg"
+              boxShadow="md"
+            >
+              <Heading size="md" mb={2}>
+                {assignment.title}
+              </Heading>
+
+              <Text fontSize="sm" color="gray.600" mb={3}>
+                {assignment.description}
+              </Text>
+
+              <Text fontSize="sm" mb={2}>
+                Due:{" "}
+                {assignment.dueDate
+                  ? new Date(assignment.dueDate).toLocaleDateString()
+                  : "N/A"}
+              </Text>
+
+              <Text fontSize="sm" color="gray.500" mb={4}>
+                Created by: {assignment.instructor?.name}
+              </Text>
+
+              <Flex gap={2} wrap="wrap">
+                {canEdit(assignment) && (
+                  <>
+                    <Button
+                      size="sm"
+                      colorScheme="yellow"
+                      onClick={() =>
+                        navigate(
+                          `/dashboard/create-assignment/${classId}`,
+                          { state: { assignment } }
+                        )
+                      }
+                    >
+                      Edit
+                    </Button>
+
+                    <Button
+                      size="sm"
+                      colorScheme="red"
+                      onClick={() => handleDelete(assignment._id)}
+                    >
+                      Delete
+                    </Button>
+                  </>
+                )}
+
+                <Button
+                  size="sm"
+                  colorScheme="purple"
+                  onClick={() =>
+                    navigate(`/dashboard/submissions/${assignment._id}`)
+                  }
+                >
+                  Submissions
+                </Button>
+              </Flex>
+            </Box>
+          ))}
+        </SimpleGrid>
+      )}
+    </Box>
   );
 };
 

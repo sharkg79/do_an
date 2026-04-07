@@ -79,7 +79,44 @@ const generateCertificate = async (req, res) => {
         message: "Complete all tests"
       });
     }
+// ================= CREATE (INSTRUCTOR) =================
+const createCertificateByInstructor = async (req, res) => {
+  try {
+    const { studentId, courseId, grade } = req.body;
 
+    const cert = await Certificate.create({
+      student: studentId,
+      course: courseId,
+      grade,
+      certificateUrl: "" // optional
+    });
+
+    res.json(cert);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+// ================= GET ALL =================
+const getAllCertificates = async (req, res) => {
+  try {
+    const certs = await Certificate.find()
+      .populate("student", "name email")
+      .populate("course", "title");
+
+    res.json(certs);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+// ================= DELETE =================
+const deleteCertificate = async (req, res) => {
+  try {
+    await Certificate.findByIdAndDelete(req.params.id);
+    res.json({ message: "Deleted" });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
     // ===== CALCULATE SCORE =====
     const assignmentScore = submissions.reduce((sum, s) => sum + s.score, 0);
     const testScore = testSubs.reduce((sum, s) => sum + s.score, 0);

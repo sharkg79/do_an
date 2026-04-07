@@ -22,14 +22,20 @@ export const createLessonAPI = async (data, file) => {
   return res.data;
 };
 
-// ====================== GET LESSONS BY COURSE ======================
-export const getLessonsByCourseAPI = async (courseId) => {
+// ====================== GET LESSONS BY CLASS ======================
+export const getLessonsByClassAPI = async (classId) => {
   const res = await axiosInstance.get(
-    `/api/lessons/course/${courseId}`
+    `/api/lessons/class/${classId}`
   );
   return res.data;
 };
-
+// ====================== GET ALL LESSONS ======================
+export const getAllLessonsAPI = async () => {
+  const res = await axiosInstance.get(
+    `/api/lessons`
+  );
+  return res.data;
+};
 // ====================== UPDATE LESSON ======================
 export const updateLessonAPI = async (lessonId, data) => {
   const res = await axiosInstance.put(
