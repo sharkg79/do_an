@@ -43,26 +43,15 @@ const CourseDetailPage = () => {
     const res = await axios.get(
       `http://localhost:5000/api/courses/${id}`,
       {
-        headers: { Authorization: `Bearer ${token}` },
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
       }
     );
 
-    const courseData = res.data.course;
-    const classesData = res.data.classes || [];
-    const enrolled = res.data.enrolledClass;
-
-    setCourse(courseData);
-    setClasses(classesData);
-
-    // ✅ set enrolled class đúng
-    if (enrolled) {
-      setEnrolledClass(enrolled);
-    } else {
-      setEnrolledClass(null);
-    }
-
+    setCourse(res.data.course);
+    setClasses(res.data.classes || []);
+    setEnrolledClass(res.data.enrolledClass || null);
   } catch (err) {
-    console.error(err);
+    console.error("❌ FETCH COURSE DETAIL:", err.response?.data || err.message);
   } finally {
     setLoading(false);
   }

@@ -1,12 +1,16 @@
 const Course = require("../models/Course");
 const Class = require("../models/Class");
 const Enrollment = require("../models/Enrollment");
+const mongoose = require("mongoose");
 
-// Create course
+// ================= CREATE =================
 async function createCourse(req, res) {
   try {
     const { title, description, category, level, price, image } = req.body;
-    if (!title) return res.status(400).json({ error: "Title is required" });
+
+    if (!title) {
+      return res.status(400).json({ error: "Title is required" });
+    }
 
     const course = new Course({
       title,
@@ -21,12 +25,12 @@ async function createCourse(req, res) {
     await course.save();
     res.status(201).json(course);
   } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: "Server error" });
+    console.error("❌ CREATE COURSE:", err);
+    res.status(500).json({ error: err.message });
   }
 }
 
-// Get all courses (support filter by category)
+// ================= GET ALL =================
 async function getCourses(req, res) {
   try {
     const { category } = req.query;
@@ -36,17 +40,25 @@ async function getCourses(req, res) {
       "instructor",
       "name email role"
     );
+
     res.json(courses);
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: "Server error" });
+  } catch (error) {
+    console.error("❌ GET COURSES:", error);
+    res.status(500).json({ error: error.message });
   }
 }
 
-// Get course by ID
+// ================= GET BY ID (FIX CHÍNH) =================
 async function getCourseById(req, res) {
   try {
-    const course = await Course.findById(req.params.id).populate(
+    const { id } = req.params;
+
+    // ✅ FIX 1: validate ObjectId
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      return res.status(400).json({ error: "Invalid course ID" });
+    }
+
+    const course = await Course.findById(id).populate(
       "instructor",
       "name email role"
     );
@@ -60,17 +72,19 @@ async function getCourseById(req, res) {
       "name email"
     );
 
-    // ✅ CHECK ENROLLMENT ĐÚNG
-    const enrollment = await Enrollment.findOne({
-  student: req.user._id,
-  course: course._id,
-  isPaid: true,
-}).lean();
-
     let enrolledClass = null;
 
-    if (enrollment) {
-      enrolledClass = enrollment.class; // trả về classId
+    // ✅ FIX 2: tránh crash khi chưa login
+    if (req.user) {
+      const enrollment = await Enrollment.findOne({
+        student: req.user._id,
+        course: course._id,
+        isPaid: true,
+      }).lean();
+
+      if (enrollment) {
+        enrolledClass = enrollment.class;
+      }
     }
 
     res.json({
@@ -79,12 +93,15 @@ async function getCourseById(req, res) {
       enrolledClass,
     });
   } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: "Server error" });
-  }
+  console.error("🔥 ERROR getCourseById FULL:", err);
+  res.status(500).json({
+    error: err.message,
+    stack: err.stack, // 👈 thêm dòng này
+  });
+}
 }
 
-// Update course
+// ================= UPDATE =================
 async function updateCourse(req, res) {
   try {
     const course = await Course.findById(req.params.id);
@@ -92,7 +109,7 @@ async function updateCourse(req, res) {
 
     if (
       req.user.role === "INSTRUCTOR" &&
-      course.instructor.toString() !== req.user._id
+      course.instructor.toString() !== req.user._id.toString()
     ) {
       return res
         .status(403)
@@ -101,6 +118,7 @@ async function updateCourse(req, res) {
 
     const { title, description, category, level, price, image, rating } =
       req.body;
+
     if (title) course.title = title;
     if (description) course.description = description;
     if (category) course.category = category.toLowerCase();
@@ -112,12 +130,12 @@ async function updateCourse(req, res) {
     await course.save();
     res.json(course);
   } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: "Server error" });
+    console.error("❌ UPDATE COURSE:", err);
+    res.status(500).json({ error: err.message });
   }
 }
 
-// Delete course
+// ================= DELETE =================
 async function deleteCourse(req, res) {
   try {
     const course = await Course.findById(req.params.id);
@@ -125,7 +143,7 @@ async function deleteCourse(req, res) {
 
     if (
       req.user.role === "INSTRUCTOR" &&
-      course.instructor.toString() !== req.user._id
+      course.instructor.toString() !== req.user._id.toString()
     ) {
       return res
         .status(403)
@@ -135,37 +153,36 @@ async function deleteCourse(req, res) {
     await course.deleteOne();
     res.json({ message: "Course deleted successfully" });
   } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: "Server error" });
+    console.error("❌ DELETE COURSE:", err);
+    res.status(500).json({ error: err.message });
   }
 }
+
+// ================= INSTRUCTOR FULL =================
 const getInstructorCoursesFull = async (req, res) => {
   try {
     const instructorId = req.user._id;
 
-    // 1. Lấy courses của instructor
     const courses = await Course.find({ instructor: instructorId }).lean();
-    const courseIds = courses.map(c => c._id);
+    const courseIds = courses.map((c) => c._id);
 
-    // 2. Lấy classes + populate sâu
     const classes = await Class.find({ course: { $in: courseIds } })
       .populate("lessons students tests")
       .populate({
         path: "assignments",
         populate: {
-          path: "submissions"
-        }
+          path: "submissions",
+        },
       })
       .lean();
 
-    // 3. Map classes vào course
     const courseMap = {};
 
-    courses.forEach(c => {
+    courses.forEach((c) => {
       courseMap[c._id] = { ...c, classes: [] };
     });
 
-    classes.forEach(cls => {
+    classes.forEach((cls) => {
       const courseId = cls.course.toString();
       if (courseMap[courseId]) {
         courseMap[courseId].classes.push(cls);
@@ -173,11 +190,12 @@ const getInstructorCoursesFull = async (req, res) => {
     });
 
     res.json(Object.values(courseMap));
-
   } catch (error) {
+    console.error("❌ INSTRUCTOR FULL:", error);
     res.status(500).json({ message: error.message });
   }
 };
+
 module.exports = {
   createCourse,
   getCourses,

@@ -1,11 +1,9 @@
-// routes/courses.js
 const express = require("express");
 const router = express.Router();
 
 const auth = require("../middlewares/auth");
-const authorize = require("../middlewares/role"); // function authorize(roles)
+const authorize = require("../middlewares/role");
 
-// Controller
 const {
   createCourse,
   getCourses,
@@ -15,27 +13,21 @@ const {
   getInstructorCoursesFull,
 } = require("../controllers/courseController");
 
-// ---------------- PUBLIC ROUTES ----------------
-// Lấy tất cả courses, hỗ trợ query ?category=
-router.get("/", getCourses);
-
-// Lấy course theo ID
-router.get("/:id", getCourseById);
-
-// ---------------- AUTH ROUTES ----------------
-// CREATE COURSE (ADMIN hoặc INSTRUCTOR)
-router.post("/", auth, authorize(["ADMIN", "INSTRUCTOR"]), createCourse);
-
-// UPDATE COURSE (ADMIN hoặc INSTRUCTOR)
-router.put("/:id", auth, authorize(["ADMIN", "INSTRUCTOR"]), updateCourse);
-
-// DELETE COURSE (ADMIN hoặc INSTRUCTOR)
-router.delete("/:id", auth, authorize(["ADMIN", "INSTRUCTOR"]), deleteCourse);
-
+// ✅ FIX: route cụ thể phải đặt TRƯỚC
 router.get(
   "/instructor/full",
   auth,
   authorize(["INSTRUCTOR"]),
   getInstructorCoursesFull
 );
+
+// PUBLIC
+router.get("/", getCourses);
+router.get("/:id", getCourseById);
+
+// PROTECTED
+router.post("/", auth, authorize(["ADMIN", "INSTRUCTOR"]), createCourse);
+router.put("/:id", auth, authorize(["ADMIN", "INSTRUCTOR"]), updateCourse);
+router.delete("/:id", auth, authorize(["ADMIN", "INSTRUCTOR"]), deleteCourse);
+
 module.exports = router;
