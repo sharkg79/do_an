@@ -2,11 +2,11 @@ const express = require("express");
 const router = express.Router();
 
 const {
-  getSubmissions,
-  getSubmissionsByAssignment,
-  gradeSubmission,
-  deleteSubmission,
-} = require("../controllers/submissionController");
+  getTestSubmissions,
+  getTestSubmissionsByTest,
+  gradeTestSubmission,
+  deleteTestSubmission,
+} = require("../controllers/testSubmissionController");
 
 const auth = require("../middlewares/auth");
 const role = require("../middlewares/role");
@@ -16,23 +16,23 @@ router.get(
   "/",
   auth,
   role(["ADMIN", "INSTRUCTOR"]),
-  getSubmissions
+  getTestSubmissions
 );
 
-// ================= GET BY ASSIGNMENT =================
+// ================= GET BY TEST =================
 router.get(
-  "/assignment/:assignmentId",
+  "/test/:testId",
   auth,
   role(["ADMIN", "INSTRUCTOR"]),
-  getSubmissionsByAssignment
+  getTestSubmissionsByTest
 );
 
-// ================= GRADE =================
+// ================= AUTO GRADE =================
 router.put(
   "/:submissionId/grade",
   auth,
   role(["ADMIN", "INSTRUCTOR"]),
-  gradeSubmission
+  gradeTestSubmission
 );
 
 // ================= DELETE =================
@@ -40,7 +40,7 @@ router.delete(
   "/:submissionId",
   auth,
   role(["ADMIN", "INSTRUCTOR"]),
-  deleteSubmission
+  deleteTestSubmission
 );
 
 module.exports = router;

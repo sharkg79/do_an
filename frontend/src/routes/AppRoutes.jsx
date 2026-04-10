@@ -11,50 +11,67 @@ import ProtectedRoute from "../utils/ProtectedRoute";
 // Pages
 import Login from "../pages/Auth/Login";
 import Register from "../pages/Auth/Register";
-import CertificateManagementPage from "../pages/Certificate/CertificateManagementPage";
 import Home from "../pages/Home/HomePage";
 import CourseDetailPage from "../pages/Course/CourseDetailPage";
+
+import StudentDashboardPage from "../pages/Report/StudentDashboardPage";
 import InstructorOverviewPage from "../pages/Report/InstructorOverviewPage";
+import AdminOverviewPage from "../pages/Report/AdminOverviewPage";
+import CourseProgressPage from "../pages/Report/CourseProgressPage";
+
 import CheckoutPage from "../pages/Payment/CheckoutPage";
 import MyCoursesPage from "../pages/Payment/MyCoursesPage";
-import ManageSubmissionPage from "../pages/Submission/ManageSubmissionPage";
-import AssignmentListPage from "../pages/Assignment/AssignmentListPage";
-import SubmitAssignmentPage from "../pages/Assignment/SubmitAssignmentPage";
-import ManageTestPage from "../pages/Test/ManageTestPage";
-import TestListPage from "../pages/TestSubmisstion/TestListPage";
-import TestDoingPage from "../pages/TestSubmisstion/TestDoingPage";
-import TestResultPage from "../pages/TestSubmisstion/TestResultPage";
-import CreateTestPage from "../pages/Test/CreateTestPage";
-import CertificatePage from "../pages/Certificate/CertificatePage";
-import ManageAssignmentPage from "../pages/Assignment/ManageAssignmentPage";
-import CourseProgressPage from "../pages/Report/CourseProgressPage";
-import StudentDashboardPage from "../pages/Report/StudentDashboardPage";
-
-import AdminOverviewPage from "../pages/Report/AdminOverviewPage";
-import ManageUserPage from "../pages/User/ManageUserPage";
-
-import CreateCoursePage from "../pages/Course/CreateCoursePage";
-import ManageCoursePage from "../pages/Course/ManageCoursePage";
-
-import ManageLessonPage from "../pages/Lesson/ManageLessonPage";
-import CreateAssignmentPage from "../pages/Assignment/CreateAssignmentPage";
-import ManageTestSubmissionPage from "../pages/TestSubmisstion/ManageTestSubmissionPage";
 import PaymentManagementPage from "../pages/Payment/ManagePaymentPage";
+
+import CertificatePage from "../pages/Certificate/CertificatePage";
+import CertificateManagementPage from "../pages/Certificate/CertificateManagementPage";
+
 import ClassListPage from "../pages/Class/ClassListPage";
 import ClassDetailPage from "../pages/Class/ClassDetailPage";
 import ManageClassPage from "../pages/Class/ManageClassPage";
 import CreateClassPage from "../pages/Class/CreateClassPage";
 
+import ManageCoursePage from "../pages/Course/ManageCoursePage";
+import CreateCoursePage from "../pages/Course/CreateCoursePage";
+
+import ManageLessonPage from "../pages/Lesson/ManageLessonPage";
+import CreateLessonPage from "../pages/Lesson/CreateLessonPage";
+import LessonList from "../pages/Lesson/LessonList";
+import LessonDetail from "../pages/Lesson/LessonDetail";
+
+import ManageUserPage from "../pages/User/ManageUserPage";
+import CreateUserPage from "../pages/User/CreateUserPage";
+import UserDetail from "../pages/User/UserDetail";
+
+// ===== ASSIGNMENT =====
+import ManageAssignmentPage from "../pages/Assignment/ManageAssignmentPage";
+import CreateAssignmentPage from "../pages/Assignment/CreateAssignmentPage";
+import AssignmentList from "../pages/Assignment/AssignmentList";
+import AssignmentDetail from "../pages/Assignment/AssignmentDetail";
+
+// ===== SUBMISSION =====
+import ManageSubmissionPage from "../pages/Submission/ManageSubmissionPage";
+
+// ===== TEST =====
+import ManageTestPage from "../pages/Test/ManageTestPage";
+import CreateTestPage from "../pages/Test/CreateTestPage";
+import TestDetail from "../pages/Test/TestDetail";
+
+
+// ===== TEST SUBMISSION =====
+import ManageTestSubmissionPage from "../pages/TestSubmisstion/ManageTestSubmissionPage";
+import TestListPage from "../pages/TestSubmisstion/TestListPage";
+import TestDoingPage from "../pages/TestSubmisstion/TestDoingPage";
+import TestResultPage from "../pages/TestSubmisstion/TestResultPage";
+
 const AppRoutes = () => {
   return (
     <Routes>
-
       {/* ================= AUTH ================= */}
       <Route element={<AuthLayout />}>
         <Route path="/login" element={<Login />} />
         <Route path="/register" element={<Register />} />
       </Route>
-     
 
       {/* ================= MAIN USER ================= */}
       <Route path="/" element={<MainLayout />}>
@@ -115,154 +132,148 @@ const AppRoutes = () => {
             </ProtectedRoute>
           }
         />
+        {/* LESSONS */}
+        <Route path="/classes/:classId/lessons" element={<LessonList />} />
+        <Route path="/lessons/:lessonId" element={<LessonDetail />} />
+        {/* ===== ASSIGNMENT (STUDENT) ===== */}
+        <Route path="/classes/:classId/assignments" element={<AssignmentList />} />
+        <Route path="/assignments/:assignmentId" element={<AssignmentDetail />} />
 
-        {/* Assignment (student) */}
+        {/* ===== TEST (STUDENT) ===== */}
+       <Route path="/tests/:testId" element={<TestDetail />} />
+       {/* MEMBERS */}
+       <Route path="/classes/:classId/users" element={<UserDetail />} />
+      </Route>
+
+      {/* ================= DASHBOARD ================= */}
+      <Route
+        path="/dashboard"
+        element={
+          <ProtectedRoute role={["INSTRUCTOR", "ADMIN"]}>
+            <DashboardLayout />
+          </ProtectedRoute>
+        }
+      >
+        {/* ===== OVERVIEW ===== */}
         <Route
-  path="courses/:courseId/assignments"
-  element={
-    <ProtectedRoute role="STUDENT">
-      <AssignmentListPage />
-    </ProtectedRoute>
-  }
-/>
-
-<Route
-  path="assignments/:assignmentId/submit"
-  element={
-    <ProtectedRoute role="STUDENT">
-      <SubmitAssignmentPage />
-    </ProtectedRoute>
-  }
-/>
-
-        {/* Test */}
-        <Route
-          path="courses/:courseId/tests"
+          path="instructor-overview"
           element={
-            <ProtectedRoute role={["ADMIN", "INSTRUCTOR", "STUDENT"]}>
-              <TestListPage />
+            <ProtectedRoute role="INSTRUCTOR">
+              <InstructorOverviewPage />
             </ProtectedRoute>
           }
         />
 
         <Route
-          path="tests/:testId/do"
-          element={
-            <ProtectedRoute role="STUDENT">
-              <TestDoingPage />
-            </ProtectedRoute>
-          }
-        />
-
-        <Route
-          path="tests/:testId/results"
-          element={
-            <ProtectedRoute role={["INSTRUCTOR", "ADMIN"]}>
-              <TestResultPage />
-            </ProtectedRoute>
-          }
-        />
-
-        <Route
-          path="course-progress/:courseId"
+          path="admin-overview"
           element={
             <ProtectedRoute role="ADMIN">
-              <CourseProgressPage />
+              <AdminOverviewPage />
+            </ProtectedRoute>
+          }
+        />
+
+        {/* ===== COURSE ===== */}
+        <Route path="courses" element={<ManageCoursePage />} />
+        <Route path="create-course" element={<CreateCoursePage />} />
+        <Route path="create-course/:id" element={<CreateCoursePage />} />
+
+        {/* ===== CLASS ===== */}
+        <Route path="classes" element={<ManageClassPage />} />
+        <Route
+          path="courses/:courseId/classes"
+          element={<ManageClassPage />}
+        />
+        <Route path="create-class" element={<CreateClassPage />} />
+        <Route path="create-class/:id" element={<CreateClassPage />} />
+
+        {/* ===== LESSON ===== */}
+        <Route path="lessons" element={<ManageLessonPage />} />
+        <Route
+          path="classes/:classId/lessons"
+          element={<ManageLessonPage />}
+        />
+        <Route path="create-lesson/:classId" element={<CreateLessonPage />} />
+        {/* ===== ASSIGNMENT ===== */}
+        <Route path="assignments" element={<ManageAssignmentPage />} />
+        <Route
+          path="classes/:classId/assignments"
+          element={<ManageAssignmentPage />}
+        />
+        <Route
+          path="create-assignment/:classId"
+          element={<CreateAssignmentPage />}
+        />
+
+        {/* ===== SUBMISSION ===== */}
+        <Route path="submissions" element={<ManageSubmissionPage />} />
+        <Route
+          path="assignments/:assignmentId/submissions"
+          element={<ManageSubmissionPage />}
+        />
+
+        {/* ===== TEST ===== */}
+        <Route path="tests" element={<ManageTestPage />} />
+        <Route
+          path="classes/:classId/tests"
+          element={<ManageTestPage />}
+        />
+        <Route path="create-test/:classId" element={<CreateTestPage />} />
+
+        {/* ===== TEST SUBMISSION ===== */}
+        <Route
+          path="test-submissions"
+          element={<ManageTestSubmissionPage />}
+        />
+        <Route
+          path="tests/:testId/submissions"
+          element={<ManageTestSubmissionPage />}
+        />
+
+        {/* ===== CERTIFICATE ===== */}
+        <Route
+          path="certificates"
+          element={<CertificateManagementPage />}
+        />
+
+        {/* ===== ADMIN ONLY ===== */}
+        <Route
+          path="users"
+          element={
+            <ProtectedRoute role="ADMIN">
+              <ManageUserPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="create-user"
+          element={
+            <ProtectedRoute role="ADMIN">
+              <CreateUserPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="create-user/:id"
+          element={
+            <ProtectedRoute role="ADMIN">
+              <CreateUserPage />
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
+          path="payments"
+          element={
+            <ProtectedRoute role="ADMIN">
+              <PaymentManagementPage />
             </ProtectedRoute>
           }
         />
       </Route>
 
-    {/* ================= DASHBOARD (ADMIN + INSTRUCTOR) ================= */}
-<Route
-  path="/dashboard"
-  element={
-    <ProtectedRoute role={["INSTRUCTOR", "ADMIN"]}>
-      <DashboardLayout />
-    </ProtectedRoute>
-  }
->
-  {/* ===== OVERVIEW ===== */}
-  <Route
-    path="instructor-overview"
-    element={
-      <ProtectedRoute role="INSTRUCTOR">
-        <InstructorOverviewPage />
-      </ProtectedRoute>
-    }
-  />
-
-  <Route
-    path="admin-overview"
-    element={
-      <ProtectedRoute role="ADMIN">
-        <AdminOverviewPage />
-      </ProtectedRoute>
-    }
-  />
-
-  {/* ===== COURSE ===== */}
-  <Route path="courses" element={<ManageCoursePage />} />
-  <Route path="create-course" element={<CreateCoursePage />} />
-  <Route path="create-course/:id" element={<CreateCoursePage />} />
-
-  {/* ===== CLASS ===== */}
-  <Route path="classes" element={<ManageClassPage />} />
-  <Route path="courses/:courseId/classes" element={<ManageClassPage />} />
-  <Route path="create-class" element={<CreateClassPage />} />
-  <Route path="create-class/:id" element={<CreateClassPage />} />
- 
-
-  {/* ===== LESSON ===== */}
-  <Route path="classes/:classId/lessons" element={<ManageLessonPage />} />
-  <Route path="class/lessons" element={<ManageLessonPage />} />
-
- / ===== ASSIGNMENT =====
-<Route
-  path="assignments"
-  element={<ManageAssignmentPage />}
-/>
-<Route
-  path="classes/:classId/assignments"
-  element={<ManageAssignmentPage />}
-/>
-<Route
-  path="create-assignment/:Id"
-  element={<CreateAssignmentPage />}
-/>
-  {/* ===== SUBMISSION ===== */}
-  <Route path="submissions/:assignmentId" element={<ManageSubmissionPage />} />
-  {/* ===== TEST ===== */}
-  <Route path="tests" element={<ManageTestPage />} />
-  <Route path="classes/:classId/tests" element={<ManageTestPage />} />
-  <Route path="test-submissions" element={<ManageTestSubmissionPage />} />
-  <Route path="create-test" element={<CreateTestPage />}/>
-  {/* ===== CERTIFICATE ===== */}
-  <Route path="certificates" element={<CertificateManagementPage />} />
-
-  {/* ===== ADMIN ONLY ===== */}
-  <Route
-    path="users"
-    element={
-      <ProtectedRoute role="ADMIN">
-        <ManageUserPage />
-      </ProtectedRoute>
-    }
-  />
-
-  <Route
-    path="payments"
-    element={
-      <ProtectedRoute role="ADMIN">
-        <PaymentManagementPage />
-      </ProtectedRoute>
-    }
-  />
-</Route>
-
       {/* ================= FALLBACK ================= */}
       <Route path="*" element={<div>404 NOT FOUND</div>} />
-
     </Routes>
   );
 };

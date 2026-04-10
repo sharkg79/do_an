@@ -6,7 +6,8 @@ const {
   getLessonsByClass,
   getAllLessons,
   updateLesson,
-  deleteLesson
+  deleteLesson,
+  getLessonById,
 } = require("../controllers/lessonController");
 
 const auth = require("../middlewares/auth");
@@ -39,6 +40,8 @@ router.post(
 router.get("/class/:classId", auth, getLessonsByClass);
 // GET ALL
 router.get("/", auth, getAllLessons);
+// GET BY ID
+router.get("/:lessonId", auth, getLessonById);
 // UPDATE
 router.put(
   "/:lessonId",

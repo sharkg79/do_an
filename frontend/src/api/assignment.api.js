@@ -11,15 +11,11 @@ export const createAssignmentAPI = async (data) => {
 };
 
 // ====================== GET ALL / MY ======================
-// admin: tất cả
-// instructor: assignment của mình
-export const getAssignmentsAPI = async () => {
-  try {
-    const res = await axiosInstance.get("/api/assignments");
-    return res.data;
-  } catch (err) {
-    throw err.response?.data || { message: "Fetch assignments failed" };
-  }
+export const getAssignmentsAPI = async (classId) => {
+  const res = await axiosInstance.get("/api/assignments", {
+    params: { classId },
+  });
+  return res.data;
 };
 
 // ====================== UPDATE ======================

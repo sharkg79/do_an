@@ -162,11 +162,35 @@ const deleteLesson = async (req, res) => {
     res.status(500).json({ message: error.message });
   }
 };
+// ================= GET BY ID =================
+const getLessonById = async (req, res) => {
+  try {
+    const { lessonId } = req.params;
 
+    if (!mongoose.Types.ObjectId.isValid(lessonId)) {
+      return res.status(400).json({ message: "Invalid lesson ID" });
+    }
+
+    const lesson = await Lesson.findById(lessonId)
+      .populate("instructor", "name");
+
+    if (!lesson) {
+      return res.status(404).json({ message: "Lesson not found" });
+    }
+
+    res.json({
+      message: "Lesson fetched successfully",
+      lesson,
+    });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
 module.exports = {
   getAllLessons,
   createLesson,
   getLessonsByClass,
   updateLesson,
   deleteLesson,
+  getLessonById,
 };

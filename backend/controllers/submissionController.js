@@ -1,121 +1,44 @@
 const mongoose = require("mongoose");
 const Submission = require("../models/Submission");
 const Assignment = require("../models/Assignment");
-const Enrollment = require("../models/Enrollment");
+const Class = require("../models/Class");
 
-// ================= SUBMIT =================
-const submitAssignment = async (req, res) => {
+// ================= GET ALL / FILTER =================
+const getSubmissions = async (req, res) => {
   try {
-    const { assignmentId } = req.params;
-    const studentId = req.user._id;
+    const { assignmentId } = req.query;
 
-    if (!mongoose.Types.ObjectId.isValid(assignmentId)) {
-      return res.status(400).json({ message: "Invalid assignment ID" });
+    let filter = {};
+
+    // ✅ filter theo assignment nếu có
+    if (assignmentId) {
+      filter.assignment = assignmentId;
     }
 
-    if (!req.file) {
-      return res.status(400).json({ message: "File is required" });
+    // ✅ instructor chỉ thấy submission của assignment mình
+    if (req.user.role === "INSTRUCTOR") {
+      const assignments = await Assignment.find({
+        instructor: req.user._id,
+      }).select("_id");
+
+      const assignmentIds = assignments.map((a) => a._id);
+
+      filter.assignment = { $in: assignmentIds };
     }
 
-    const assignment = await Assignment.findById(assignmentId);
+    const submissions = await Submission.find(filter)
+      .populate("student", "name email")
+      .populate("assignment", "title")
+      .sort({ createdAt: -1 });
 
-    if (!assignment) {
-      return res.status(404).json({ message: "Assignment not found" });
-    }
-
-    // ✅ check enrollment
-    const enrollment = await Enrollment.findOne({
-      student: studentId,
-      course: assignment.course,
-      isPaid: true
-    });
-
-    if (!enrollment) {
-      return res.status(403).json({
-        message: "You are not enrolled in this course"
-      });
-    }
-
-    // ✅ check deadline
-    if (assignment.dueDate && new Date() > assignment.dueDate) {
-      return res.status(400).json({
-        message: "Deadline passed"
-      });
-    }
-
-    const fileData = {
-      fileUrl: `/uploads/${req.file.filename}`,
-      fileName: req.file.originalname,
-      fileType: req.file.mimetype
-    };
-
-    // upsert
-    const submission = await Submission.findOneAndUpdate(
-      { assignment: assignmentId, student: studentId },
-      {
-        ...fileData,
-        score: 0,
-        feedback: ""
-      },
-      { new: true, upsert: true }
-    );
-
-    res.json({
-      message: "Submitted successfully",
-      submission
-    });
-
+    res.json(submissions);
   } catch (error) {
+    console.error("GET SUBMISSIONS ERROR:", error);
     res.status(500).json({ message: error.message });
   }
 };
 
-// ================= GRADE =================
-const gradeSubmission = async (req, res) => {
-  try {
-    const { submissionId } = req.params;
-    const { score, feedback } = req.body;
-
-    if (!mongoose.Types.ObjectId.isValid(submissionId)) {
-      return res.status(400).json({ message: "Invalid submission ID" });
-    }
-
-    const submission = await Submission.findById(submissionId)
-      .populate("assignment");
-
-    if (!submission) {
-      return res.status(404).json({ message: "Submission not found" });
-    }
-
-    // check quyền
-    if (
-      req.user.role === "INSTRUCTOR" &&
-      submission.assignment.instructor.toString() !== req.user._id.toString()
-    ) {
-      return res.status(403).json({ message: "Not your assignment" });
-    }
-
-    // validate score
-    if (score < 0 || score > 100) {
-      return res.status(400).json({ message: "Score must be 0-100" });
-    }
-
-    submission.score = score;
-    submission.feedback = feedback;
-
-    await submission.save();
-
-    res.json({
-      message: "Graded successfully",
-      submission
-    });
-
-  } catch (error) {
-    res.status(500).json({ message: error.message });
-  }
-};
-
-// ================= GET ALL =================
+// ================= GET BY ASSIGNMENT =================
 const getSubmissionsByAssignment = async (req, res) => {
   try {
     const { assignmentId } = req.params;
@@ -126,64 +49,65 @@ const getSubmissionsByAssignment = async (req, res) => {
       return res.status(404).json({ message: "Assignment not found" });
     }
 
+    // ✅ check quyền
     if (
-      req.user.role === "INSTRUCTOR" &&
-      assignment.instructor.toString() !== req.user._id.toString()
+      req.user.role !== "ADMIN" &&
+      !assignment.instructor.equals(req.user._id)
     ) {
-      return res.status(403).json({ message: "Not your assignment" });
+      return res.status(403).json({ message: "Forbidden" });
     }
 
-    const submissions = await Submission.find({ assignment: assignmentId })
+    const submissions = await Submission.find({
+      assignment: assignmentId,
+    })
       .populate("student", "name email")
       .sort({ createdAt: -1 });
 
     res.json(submissions);
-
   } catch (error) {
+    console.error("GET BY ASSIGNMENT ERROR:", error);
     res.status(500).json({ message: error.message });
   }
 };
 
-// ================= MY =================
-const getMySubmissions = async (req, res) => {
-  try {
-    const submissions = await Submission.find({
-      student: req.user._id
-    })
-      .populate("assignment", "title dueDate")
-      .sort({ createdAt: -1 });
-
-    res.json(submissions);
-
-  } catch (error) {
-    res.status(500).json({ message: error.message });
-  }
-};
-
-// ================= DETAIL =================
-const getSubmissionDetail = async (req, res) => {
+// ================= GRADE =================
+const gradeSubmission = async (req, res) => {
   try {
     const { submissionId } = req.params;
+    const { score, feedback } = req.body;
 
-    const submission = await Submission.findById(submissionId)
-      .populate("student", "name email")
-      .populate("assignment", "title instructor");
+    if (score === undefined) {
+      return res.status(400).json({ message: "Score is required" });
+    }
+
+    const submission = await Submission.findById(submissionId).populate(
+      "assignment"
+    );
 
     if (!submission) {
-      return res.status(404).json({ message: "Not found" });
+      return res.status(404).json({ message: "Submission not found" });
     }
 
-    // student chỉ xem của mình
+    // ✅ check quyền
     if (
-      req.user.role === "STUDENT" &&
-      submission.student._id.toString() !== req.user._id.toString()
+      req.user.role !== "ADMIN" &&
+      submission.assignment.instructor.toString() !==
+        req.user._id.toString()
     ) {
-      return res.status(403).json({ message: "Unauthorized" });
+      return res.status(403).json({ message: "Forbidden" });
     }
 
-    res.json(submission);
+    submission.score = score;
+    submission.feedback = feedback;
 
+    await submission.save();
+
+    res.json({
+      message: "Graded successfully",
+      submission,
+    });
   } catch (error) {
+    console.error("GRADE ERROR:", error);
     res.status(500).json({ message: error.message });
   }
 };
@@ -193,34 +117,39 @@ const deleteSubmission = async (req, res) => {
   try {
     const { submissionId } = req.params;
 
-    const submission = await Submission.findById(submissionId)
-      .populate("assignment");
+    if (!mongoose.Types.ObjectId.isValid(submissionId)) {
+      return res.status(400).json({ message: "Invalid ID" });
+    }
+
+    const submission = await Submission.findById(submissionId).populate(
+      "assignment"
+    );
 
     if (!submission) {
       return res.status(404).json({ message: "Not found" });
     }
 
+    // ✅ admin hoặc instructor của assignment
     if (
-      req.user.role === "INSTRUCTOR" &&
-      submission.assignment.instructor.toString() !== req.user._id.toString()
+      req.user.role !== "ADMIN" &&
+      submission.assignment.instructor.toString() !==
+        req.user._id.toString()
     ) {
-      return res.status(403).json({ message: "Not your assignment" });
+      return res.status(403).json({ message: "Forbidden" });
     }
 
     await submission.deleteOne();
 
     res.json({ message: "Deleted" });
-
   } catch (error) {
+    console.error("DELETE ERROR:", error);
     res.status(500).json({ message: error.message });
   }
 };
 
 module.exports = {
-  submitAssignment,
-  gradeSubmission,
+  getSubmissions,
   getSubmissionsByAssignment,
-  getMySubmissions,
-  getSubmissionDetail,
-  deleteSubmission
+  gradeSubmission,
+  deleteSubmission,
 };

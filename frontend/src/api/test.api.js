@@ -1,60 +1,44 @@
-// src/api/test.api.js
 import axiosInstance from "./axios";
 
-// ====================== CREATE TEST ======================
+// GET
+export const getTestsAPI = async (classId) => {
+  const res = await axiosInstance.get("/api/tests", {
+    params: { classId },
+  });
+  return res.data;
+};
+
+// CREATE
 export const createTestAPI = async (data) => {
   const res = await axiosInstance.post("/api/tests", data);
   return res.data;
 };
 
-// ====================== UPDATE TEST ======================
-export const updateTestAPI = async (testId, data) => {
-  const res = await axiosInstance.put(
-    `/api/tests/${testId}`,
-    data
-  );
+// UPDATE
+export const updateTestAPI = async (id, data) => {
+  const res = await axiosInstance.put(`/api/tests/${id}`, data);
   return res.data;
 };
 
-// ====================== DELETE TEST ======================
-export const deleteTestAPI = async (testId) => {
-  const res = await axiosInstance.delete(
-    `/api/tests/${testId}`
-  );
+// DELETE
+export const deleteTestAPI = async (id) => {
+  const res = await axiosInstance.delete(`/api/tests/${id}`);
   return res.data;
 };
 
-// ====================== GET TESTS BY COURSE ======================
-export const getTestsByCourseAPI = async (courseId) => {
-  const res = await axiosInstance.get(
-    `/api/tests/course/${courseId}`
-  );
-  return res.data;
-};
-
-// ====================== SUBMIT TEST ======================
+// SUBMIT
 export const submitTestAPI = async (testId, answers) => {
   const res = await axiosInstance.post(
     `/api/tests/${testId}/submit`,
-    { answers } // gửi danh sách đáp án
+    { answers }
   );
   return res.data;
 };
 
-// ====================== GET SUBMISSIONS (INSTRUCTOR) ======================
+// GET SUBMISSIONS
 export const getTestSubmissionsAPI = async (testId) => {
   const res = await axiosInstance.get(
     `/api/tests/${testId}/submissions`
   );
-  return res.data;
-};
-export const deleteTestSubmissionAPI = async (id) => {
-  const res = await axiosInstance.delete(
-    `/api/tests/submissions/${id}`
-  );
-  return res.data;
-};
-export const getAllTestsAPI = async () => {
-  const res = await axiosInstance.get("/api/tests");
   return res.data;
 };

@@ -13,6 +13,7 @@ const reportRoutes = require("./routes/reports");
 const submissionRoutes = require("./routes/submissions");
 const paymentRoutes = require("./routes/payments");
 const testRoutes = require("./routes/tests");
+const testSubmissionRoutes = require("./routes/testSubmission");
 const certificateRoutes = require("./routes/certificates");
 const userRoutes = require("./routes/users");
 
@@ -28,6 +29,7 @@ app.use("/api/reports", reportRoutes);
 app.use("/api/submissions",submissionRoutes);
 app.use("/api/payments", paymentRoutes);
 app.use("/api/tests", testRoutes);
+app.use("/api/test-submissions", testSubmissionRoutes);
 app.use("/api/certificates", certificateRoutes);
 app.use("/api/users", userRoutes);
 

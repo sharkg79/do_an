@@ -8,7 +8,10 @@ export const getUsersAPI = async () => {
   const res = await axiosInstance.get("/api/users");
   return res.data;
 };
-
+export const getUserByIdAPI = async (userId) => {
+  const res = await axiosInstance.get(`/api/users/${userId}`);
+  return res.data;
+}
 // Xóa user
 export const deleteUserAPI = async (userId) => {
   const res = await axiosInstance.delete(`/api/users/${userId}`);
@@ -20,5 +23,19 @@ export const updateUserRoleAPI = async (userId, role) => {
   const res = await axiosInstance.put(`/api/users/${userId}/role`, {
     role,
   });
+  return res.data;
+};
+// Tạo user
+export const createUserAPI = async (data) => {
+  const res = await axiosInstance.post("/api/users", data);
+  return res.data;
+};
+// Cập nhật user
+export const updateUserAPI = async (userId, data) => {
+  const res = await axiosInstance.put(`/api/users/${userId}`, data);
+  return res.data;
+};
+export const getUsersByClassAPI = async (classId) => {
+  const res = await axiosInstance.get(`/api/classes/${classId}/users`);
   return res.data;
 };

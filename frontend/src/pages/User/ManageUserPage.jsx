@@ -14,8 +14,11 @@ import {
   Text,
   Badge,
   HStack,
+  Flex,
 } from "@chakra-ui/react";
+
 import { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import axios from "axios";
 
 const API = "http://localhost:5000/api/users";
@@ -26,6 +29,7 @@ const ManageUserPage = () => {
 
   const token = localStorage.getItem("token");
   const toast = useToast();
+  const navigate = useNavigate();
 
   // ================= FETCH =================
   const fetchUsers = async () => {
@@ -33,7 +37,6 @@ const ManageUserPage = () => {
       const res = await axios.get(API, {
         headers: { Authorization: `Bearer ${token}` },
       });
-
       setUsers(res.data);
     } catch (err) {
       toast({
@@ -123,19 +126,22 @@ const ManageUserPage = () => {
 
   return (
     <Box p={6}>
-      <Heading size="lg" mb={6}>
-        User Management
-      </Heading>
+      {/* HEADER */}
+      <Flex justify="space-between" align="center" mb={6}>
+        <Heading size="lg">User Management</Heading>
+
+        <Button
+          colorScheme="blue"
+          onClick={() => navigate("/dashboard/create-user")}
+        >
+          + Add User
+        </Button>
+      </Flex>
 
       {users.length === 0 ? (
         <Text>No users found</Text>
       ) : (
-        <Box
-          bg="white"
-          p={4}
-          borderRadius="lg"
-          boxShadow="md"
-        >
+        <Box bg="white" p={4} borderRadius="lg" boxShadow="md">
           <Table variant="simple">
             <Thead>
               <Tr>
@@ -154,14 +160,12 @@ const ManageUserPage = () => {
 
                   <Td>{user.email}</Td>
 
-                  {/* CURRENT ROLE */}
                   <Td>
                     <Badge colorScheme={getRoleColor(user.role)}>
                       {user.role}
                     </Badge>
                   </Td>
 
-                  {/* CHANGE ROLE */}
                   <Td>
                     <Select
                       size="sm"
@@ -176,9 +180,18 @@ const ManageUserPage = () => {
                     </Select>
                   </Td>
 
-                  {/* ACTION */}
                   <Td isNumeric>
                     <HStack justify="flex-end">
+                      {/* EDIT */}
+                       <Button
+                        size="sm"
+                        colorScheme="yellow"
+                        onClick={() =>
+                        navigate(`/dashboard/create-user/${user._id}`)
+                         }
+                       >
+                        Edit
+                        </Button>
                       <Button
                         size="sm"
                         colorScheme="red"

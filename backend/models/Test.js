@@ -19,11 +19,7 @@ const questionSchema = new mongoose.Schema({
 const testSchema = new mongoose.Schema({
   title: { type: String, required: true },
 
-  course: {
-    type: mongoose.Schema.Types.ObjectId,
-    ref: "Course",
-    required: true
-  },
+  
 class: {
   type: mongoose.Schema.Types.ObjectId,
   ref: "Class",

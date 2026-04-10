@@ -10,11 +10,11 @@ const AdminSidebar = () => {
   const role = user?.role;
 
   const adminMenu = [
-    { name: "Overview", path: "/dashboard/overview" },
+    { name: "Overview", path: "/dashboard/admin-overview" },
     { name: "Users", path: "/dashboard/users" },
     { name: "Courses", path: "/dashboard/courses" },
     { name: "Classes", path: "/dashboard/classes" },
-    { name: "Lessons", path: "/dashboard/class/lessons" },
+    { name: "Lessons", path: "/dashboard/lessons" },
     { name: "Payments", path: "/dashboard/payments" },
     { name: "Certificates", path: "/dashboard/certificates" },
     { name: "Assignments", path: "/dashboard/assignments" },
@@ -26,7 +26,7 @@ const AdminSidebar = () => {
   const instructorMenu = [
     { name: "Overview", path: "/dashboard/instructor-overview" },
     { name: "Classes", path: "/dashboard/classes" },
-    { name: "Lessons", path: "/dashboard/class/lessons" },
+    { name: "Lessons", path: "/dashboard/lessons" },
     { name: "Assignments", path: "/dashboard/assignments" },
     { name: "Submissions", path: "/dashboard/submissions" },
     { name: "Tests", path: "/dashboard/tests" },

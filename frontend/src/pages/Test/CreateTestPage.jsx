@@ -3,94 +3,62 @@ import {
   Heading,
   Input,
   Button,
-  Textarea,
-  Flex,
-  VStack,
-  HStack,
+  Grid,
   useToast,
-  Select,
+  Spinner,
+  Textarea,
+  Text,
+  Flex,
   IconButton,
 } from "@chakra-ui/react";
 
 import { AddIcon, DeleteIcon } from "@chakra-ui/icons";
 
 import { useEffect, useState } from "react";
-import { useNavigate, useParams } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 
 import {
   createTestAPI,
   updateTestAPI,
 } from "../../api/test.api";
 
-import axiosInstance from "../../api/axios";
-
 const CreateTestPage = () => {
-  const { id } = useParams();
-  const isEdit = !!id;
-
+  const location = useLocation();
   const navigate = useNavigate();
   const toast = useToast();
 
-  const [loading, setLoading] = useState(false);
-  const [courses, setCourses] = useState([]);
-  const [classes, setClasses] = useState([]);
+  const test = location.state?.test; // 👈 edit mode
+  const query = new URLSearchParams(location.search);
+  const classIdFromQuery = query.get("classId");
+
+  const isEdit = !!test;
 
   const [form, setForm] = useState({
     title: "",
-    course: "",
-    class: "",
-    totalMarks: 100,
+    class: classIdFromQuery || "",
     dueDate: "",
+    totalMarks: 100,
     questions: [],
   });
 
-  // ================= LOAD COURSES =================
-  const fetchCourses = async () => {
-    const res = await axiosInstance.get("/api/courses");
-    setCourses(res.data);
-  };
+  const [loading, setLoading] = useState(false);
 
-  // ================= LOAD CLASSES =================
-  const fetchClasses = async (courseId) => {
-    if (!courseId) return;
-    const res = await axiosInstance.get(
-      `/api/classes?course=${courseId}`
-    );
-    setClasses(res.data);
-  };
-
-  // ================= LOAD TEST (EDIT) =================
-  const fetchTest = async () => {
-    const res = await axiosInstance.get(`/api/tests/${id}`);
-    const data = res.data;
-
-    setForm({
-      title: data.title,
-      course: data.course,
-      class: data.class,
-      totalMarks: data.totalMarks,
-      dueDate: data.dueDate?.slice(0, 16) || "",
-      questions: data.questions || [],
-    });
-
-    fetchClasses(data.course);
-  };
-
+  // ================= INIT EDIT =================
   useEffect(() => {
-    fetchCourses();
-    if (isEdit) fetchTest();
-  }, []);
-
-  // ================= FORM CHANGE =================
-  const handleChange = (e) => {
-    setForm({ ...form, [e.target.name]: e.target.value });
-
-    if (e.target.name === "course") {
-      fetchClasses(e.target.value);
+    if (isEdit) {
+      setForm({
+        title: test.title || "",
+        class: test.class?._id || test.class,
+        dueDate: test.dueDate
+          ? new Date(test.dueDate).toISOString().slice(0, 10)
+          : "",
+        totalMarks: test.totalMarks || 100,
+        questions: test.questions || [],
+      });
     }
-  };
+  }, [test]);
 
-  // ================= QUESTIONS =================
+  // ================= QUESTION HANDLER =================
   const addQuestion = () => {
     setForm({
       ...form,
@@ -117,7 +85,12 @@ const CreateTestPage = () => {
     setForm({ ...form, questions: updated });
   };
 
-  // ================= OPTIONS =================
+  const updateOption = (qIndex, oIndex, value) => {
+    const updated = [...form.questions];
+    updated[qIndex].options[oIndex] = value;
+    setForm({ ...form, questions: updated });
+  };
+
   const addOption = (qIndex) => {
     const updated = [...form.questions];
     updated[qIndex].options.push("");
@@ -126,49 +99,47 @@ const CreateTestPage = () => {
 
   const removeOption = (qIndex, oIndex) => {
     const updated = [...form.questions];
+    if (updated[qIndex].options.length <= 2) return;
+
     updated[qIndex].options.splice(oIndex, 1);
     setForm({ ...form, questions: updated });
   };
 
-  const updateOption = (qIndex, oIndex, value) => {
-    const updated = [...form.questions];
-    updated[qIndex].options[oIndex] = value;
-    setForm({ ...form, questions: updated });
-  };
-
   // ================= SUBMIT =================
-  const handleSubmit = async () => {
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+
+    if (!form.title || !form.class) {
+      toast({
+        title: "Title & Class required",
+        status: "warning",
+      });
+      return;
+    }
+
+    setLoading(true);
+
     try {
-      setLoading(true);
-
-      if (!form.title || !form.course || !form.class) {
-        return toast({
-          title: "Missing required fields",
-          status: "warning",
-        });
-      }
-
-      if (form.questions.length === 0) {
-        return toast({
-          title: "Add at least 1 question",
-          status: "warning",
-        });
-      }
-
       if (isEdit) {
-        await updateTestAPI(id, form);
-        toast({ title: "Updated successfully", status: "success" });
+        await updateTestAPI(test._id, form);
+
+        toast({
+          title: "Updated successfully",
+          status: "success",
+        });
       } else {
         await createTestAPI(form);
-        toast({ title: "Created successfully", status: "success" });
+
+        toast({
+          title: "Created successfully",
+          status: "success",
+        });
       }
 
-      navigate("/dashboard/tests");
-
+      navigate(-1);
     } catch (err) {
-      console.error(err);
       toast({
-        title: "Error",
+        title: err.message || "Save failed",
         status: "error",
       });
     } finally {
@@ -178,135 +149,162 @@ const CreateTestPage = () => {
 
   // ================= UI =================
   return (
-    <Box>
-      <Heading mb={6}>
+    <Box maxW="900px" mx="auto" mt={10}>
+      <Heading size="lg" mb={6}>
         {isEdit ? "Update Test" : "Create Test"}
       </Heading>
 
-      <VStack spacing={4} align="stretch">
-
-        <Input
-          placeholder="Title"
-          name="title"
-          value={form.title}
-          onChange={handleChange}
-        />
-
-        <Select
-          placeholder="Select Course"
-          name="course"
-          value={form.course}
-          onChange={handleChange}
-        >
-          {courses.map((c) => (
-            <option key={c._id} value={c._id}>
-              {c.title}
-            </option>
-          ))}
-        </Select>
-
-        <Select
-          placeholder="Select Class"
-          name="class"
-          value={form.class}
-          onChange={handleChange}
-        >
-          {classes.map((cl) => (
-            <option key={cl._id} value={cl._id}>
-              {cl.name}
-            </option>
-          ))}
-        </Select>
-
-        <Input
-          type="number"
-          name="totalMarks"
-          value={form.totalMarks}
-          onChange={handleChange}
-        />
-
-        <Input
-          type="datetime-local"
-          name="dueDate"
-          value={form.dueDate}
-          onChange={handleChange}
-        />
-
-        {/* QUESTIONS */}
-        <Heading size="md">Questions</Heading>
-
-        {form.questions.map((q, qIndex) => (
-          <Box key={qIndex} borderWidth="1px" p={4} borderRadius="md">
-            <Flex justify="space-between">
-              <Heading size="sm">Question {qIndex + 1}</Heading>
-              <IconButton
-                icon={<DeleteIcon />}
-                onClick={() => removeQuestion(qIndex)}
-              />
-            </Flex>
-
-            <Textarea
-              mt={2}
-              placeholder="Question text"
-              value={q.questionText}
+      <Box bg="white" p={6} borderRadius="lg" boxShadow="md">
+        <form onSubmit={handleSubmit}>
+          <Grid templateColumns="1fr" gap={4}>
+            {/* TITLE */}
+            <Input
+              placeholder="Test title"
+              value={form.title}
               onChange={(e) =>
-                updateQuestion(qIndex, "questionText", e.target.value)
+                setForm({ ...form, title: e.target.value })
+              }
+              required
+            />
+
+            {/* DUE DATE */}
+            <Input
+              type="date"
+              value={form.dueDate}
+              onChange={(e) =>
+                setForm({ ...form, dueDate: e.target.value })
               }
             />
 
-            {/* OPTIONS */}
-            {q.options.map((opt, oIndex) => (
-              <HStack key={oIndex} mt={2}>
-                <Input
-                  placeholder={`Option ${oIndex + 1}`}
-                  value={opt}
-                  onChange={(e) =>
-                    updateOption(qIndex, oIndex, e.target.value)
-                  }
-                />
+            {/* TOTAL MARKS */}
+            <Input
+              type="number"
+              placeholder="Total marks"
+              value={form.totalMarks}
+              onChange={(e) =>
+                setForm({
+                  ...form,
+                  totalMarks: e.target.value,
+                })
+              }
+            />
 
-                <Select
-                  value={q.correctOption}
-                  onChange={(e) =>
-                    updateQuestion(
-                      qIndex,
-                      "correctOption",
-                      Number(e.target.value)
-                    )
-                  }
+            {/* QUESTIONS */}
+            <Box>
+              <Flex justify="space-between" mb={3}>
+                <Heading size="md">Questions</Heading>
+                <Button size="sm" onClick={addQuestion}>
+                  + Add Question
+                </Button>
+              </Flex>
+
+              {form.questions.length === 0 && (
+                <Text>No questions yet</Text>
+              )}
+
+              {form.questions.map((q, qIndex) => (
+                <Box
+                  key={qIndex}
+                  border="1px solid #ddd"
+                  p={4}
+                  borderRadius="md"
+                  mb={4}
                 >
-                  {q.options.map((_, idx) => (
-                    <option key={idx} value={idx}>
-                      Correct
-                    </option>
+                  <Flex justify="space-between" mb={2}>
+                    <Text fontWeight="bold">
+                      Question {qIndex + 1}
+                    </Text>
+                    <IconButton
+                      size="sm"
+                      icon={<DeleteIcon />}
+                      onClick={() => removeQuestion(qIndex)}
+                    />
+                  </Flex>
+
+                  {/* QUESTION TEXT */}
+                  <Textarea
+                    placeholder="Question text"
+                    value={q.questionText}
+                    onChange={(e) =>
+                      updateQuestion(
+                        qIndex,
+                        "questionText",
+                        e.target.value
+                      )
+                    }
+                    mb={3}
+                  />
+
+                  {/* OPTIONS */}
+                  {q.options.map((opt, oIndex) => (
+                    <Flex key={oIndex} mb={2} gap={2}>
+                      <Input
+                        placeholder={`Option ${oIndex + 1}`}
+                        value={opt}
+                        onChange={(e) =>
+                          updateOption(
+                            qIndex,
+                            oIndex,
+                            e.target.value
+                          )
+                        }
+                      />
+
+                      <Button
+                        size="sm"
+                        colorScheme={
+                          q.correctOption === oIndex
+                            ? "green"
+                            : "gray"
+                        }
+                        onClick={() =>
+                          updateQuestion(
+                            qIndex,
+                            "correctOption",
+                            oIndex
+                          )
+                        }
+                      >
+                        Correct
+                      </Button>
+
+                      <IconButton
+                        size="sm"
+                        icon={<DeleteIcon />}
+                        onClick={() =>
+                          removeOption(qIndex, oIndex)
+                        }
+                      />
+                    </Flex>
                   ))}
-                </Select>
 
-                <IconButton
-                  icon={<DeleteIcon />}
-                  onClick={() => removeOption(qIndex, oIndex)}
-                />
-              </HStack>
-            ))}
+                  <Button
+                    size="sm"
+                    leftIcon={<AddIcon />}
+                    onClick={() => addOption(qIndex)}
+                  >
+                    Add Option
+                  </Button>
+                </Box>
+              ))}
+            </Box>
 
-            <Button mt={2} onClick={() => addOption(qIndex)}>
-              + Add Option
+            {/* SUBMIT */}
+            <Button
+              colorScheme="teal"
+              type="submit"
+              isLoading={loading}
+            >
+              {isEdit ? "Update Test" : "Create Test"}
             </Button>
-          </Box>
-        ))}
 
-        <Button leftIcon={<AddIcon />} onClick={addQuestion}>
-          Add Question
-        </Button>
-
-        <Button
-          colorScheme="blue"
-          onClick={handleSubmit}
-          isLoading={loading}
-        >
-          {isEdit ? "Update Test" : "Create Test"}
-        </Button>
-      </VStack>
+            {/* CANCEL */}
+            <Button variant="outline" onClick={() => navigate(-1)}>
+              Cancel
+            </Button>
+          </Grid>
+        </form>
+      </Box>
     </Box>
   );
 };

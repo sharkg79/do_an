@@ -3,39 +3,40 @@ const Assignment = require("../models/Assignment");
 const Submission = require("../models/Submission");
 const Class = require("../models/Class");
 
-// ================= CREATE =================
 const createAssignment = async (req, res) => {
   try {
     const { title, description, dueDate, classId } = req.body;
 
-    // ✅ validate title
-    if (!title) {
+    if (!title || !classId) {
       return res.status(400).json({
-        message: "Title is required",
+        message: "Title and classId are required",
       });
     }
 
-    // ✅ FIX CHÍNH: bắt buộc classId
-    if (!classId) {
-      return res.status(400).json({
-        message: "classId is required",
-      });
+    const classData = await Class.findById(classId);
+
+    if (!classData) {
+      return res.status(404).json({ message: "Class not found" });
+    }
+
+    // ✅ Instructor phải thuộc class
+    if (
+      req.user.role === "INSTRUCTOR" &&
+      !classData.instructor.equals(req.user._id)
+    ) {
+      return res.status(403).json({ message: "Not your class" });
     }
 
     const assignment = await Assignment.create({
       title,
       description,
-      dueDate: dueDate || null,
-      classId, // ✅ KHÔNG dùng || null nữa
+      dueDate,
+      classId,
       instructor: req.user._id,
     });
 
-    res.status(201).json({
-      message: "Created",
-      assignment,
-    });
+    res.status(201).json(assignment);
   } catch (error) {
-    console.error("CREATE ERROR:", error);
     res.status(500).json({ message: error.message });
   }
 };
@@ -44,36 +45,23 @@ const createAssignment = async (req, res) => {
 const getAssignments = async (req, res) => {
   try {
     const { classId } = req.query;
-
     let filter = {};
 
-    // ✅ ADMIN: không filter → lấy tất cả
-    if (req.user.role === "ADMIN") {
-      // giữ filter = {}
-    }
-
-    // ✅ INSTRUCTOR: chỉ lấy assignment của mình
-    else if (req.user.role === "INSTRUCTOR") {
+    if (req.user.role === "INSTRUCTOR") {
       filter.instructor = req.user._id;
     }
 
-    // ❌ STUDENT: chặn luôn
-    else {
-      return res.status(403).json({ message: "Forbidden" });
-    }
-
-    // ✅ filter theo class nếu có
     if (classId) {
       filter.classId = classId;
     }
 
     const assignments = await Assignment.find(filter)
-      .populate("instructor", "_id name email")
+      .populate("instructor", "name email")
+      .populate("classId", "name")
       .sort({ createdAt: -1 });
 
     res.json(assignments);
   } catch (error) {
-    console.error("GET ERROR:", error);
     res.status(500).json({ message: error.message });
   }
 };
@@ -158,39 +146,34 @@ const submitAssignment = async (req, res) => {
   try {
     const { assignmentId } = req.params;
 
-    if (!mongoose.Types.ObjectId.isValid(assignmentId)) {
-      return res.status(400).json({ message: "Invalid ID" });
-    }
-
-    if (req.user.role !== "STUDENT") {
-      return res.status(403).json({ message: "Only students can submit" });
-    }
-
-    if (!req.file) {
-      return res.status(400).json({ message: "File required" });
-    }
-
     const assignment = await Assignment.findById(assignmentId);
 
     if (!assignment) {
-      return res.status(404).json({ message: "Assignment not found" });
+      return res.status(404).json({ message: "Not found" });
     }
 
-    // ⚠️ nếu vẫn dùng class thì giữ, không thì bỏ đoạn này
-    if (assignment.classId) {
-      const classData = await Class.findById(assignment.classId);
+    // ✅ check deadline
+    if (assignment.dueDate && new Date() > assignment.dueDate) {
+      return res.status(400).json({ message: "Deadline passed" });
+    }
 
-      if (!classData) {
-        return res.status(404).json({ message: "Class not found" });
-      }
+    // ✅ check class
+    const classData = await Class.findById(assignment.classId);
 
-      const isStudentInClass = classData.students.some(
-        (s) => s.toString() === req.user._id.toString()
-      );
+    const isStudent = classData.students.includes(req.user._id);
 
-      if (!isStudentInClass) {
-        return res.status(403).json({ message: "Not enrolled in class" });
-      }
+    if (!isStudent) {
+      return res.status(403).json({ message: "Not enrolled" });
+    }
+
+    // ✅ check đã submit chưa
+    const existed = await Submission.findOne({
+      assignment: assignmentId,
+      student: req.user._id,
+    });
+
+    if (existed) {
+      return res.status(400).json({ message: "Already submitted" });
     }
 
     const submission = await Submission.create({
@@ -199,18 +182,9 @@ const submitAssignment = async (req, res) => {
       contentUrl: `/uploads/${req.file.filename}`,
     });
 
-    res.json({
-      message: "Submitted",
-      submission,
-    });
-  } catch (error) {
-    console.error("SUBMIT ERROR:", error);
-
-    if (error.code === 11000) {
-      return res.status(400).json({ message: "Already submitted" });
-    }
-
-    res.status(500).json({ message: error.message });
+    res.json(submission);
+  } catch (err) {
+    res.status(500).json({ message: err.message });
   }
 };
 
@@ -258,8 +232,18 @@ const getSubmissionsByAssignment = async (req, res) => {
   try {
     const { assignmentId } = req.params;
 
-    if (!mongoose.Types.ObjectId.isValid(assignmentId)) {
-      return res.status(400).json({ message: "Invalid ID" });
+    const assignment = await Assignment.findById(assignmentId);
+
+    if (!assignment) {
+      return res.status(404).json({ message: "Not found" });
+    }
+
+    // ✅ chỉ instructor của assignment hoặc admin
+    if (
+      req.user.role !== "ADMIN" &&
+      !assignment.instructor.equals(req.user._id)
+    ) {
+      return res.status(403).json({ message: "Forbidden" });
     }
 
     const submissions = await Submission.find({ assignment: assignmentId })
@@ -268,7 +252,6 @@ const getSubmissionsByAssignment = async (req, res) => {
 
     res.json(submissions);
   } catch (error) {
-    console.error("GET SUBMISSIONS ERROR:", error);
     res.status(500).json({ message: error.message });
   }
 };

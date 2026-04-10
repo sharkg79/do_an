@@ -1,177 +1,152 @@
 import {
   Box,
   Heading,
-  Button,
-  Table,
-  Thead,
-  Tbody,
-  Tr,
-  Th,
-  Td,
-  Input,
+  SimpleGrid,
+  Text,
   Flex,
   Spinner,
   useToast,
-  Modal,
-  ModalOverlay,
-  ModalContent,
-  ModalHeader,
-  ModalCloseButton,
-  ModalBody,
-  ModalFooter,
+  Button,
 } from "@chakra-ui/react";
 
 import { useEffect, useState } from "react";
 import {
   getAllCertificatesAPI,
-  createCertificateAPI,
   deleteCertificateAPI,
 } from "../../api/certificate.api";
 
-import { useDisclosure } from "@chakra-ui/react";
-import { useContext } from "react";
-import { AuthContext } from "../../context/AuthContext";
+import { useAuth } from "../../context/AuthContext";
 
-const CertificateManagementPage = () => {
-  const [certs, setCerts] = useState([]);
+const ManageCertificatePage = () => {
+  const [certificates, setCertificates] = useState([]);
   const [loading, setLoading] = useState(true);
 
-  const [studentId, setStudentId] = useState("");
-  const [courseId, setCourseId] = useState("");
-  const [grade, setGrade] = useState("");
-
-  const { user } = useContext(AuthContext);
-
-  const { isOpen, onOpen, onClose } = useDisclosure();
+  const { user, loading: authLoading } = useAuth();
   const toast = useToast();
 
   // ================= FETCH =================
-  const fetchCerts = async () => {
+  const fetchCertificates = async () => {
     try {
       const data = await getAllCertificatesAPI();
-      setCerts(data);
+      setCertificates(data);
     } catch (err) {
-      toast({ title: "Error loading", status: "error" });
+      toast({
+        title: err.message || "Fetch failed",
+        status: "error",
+      });
     } finally {
       setLoading(false);
     }
   };
 
   useEffect(() => {
-    fetchCerts();
+    fetchCertificates();
   }, []);
-
-  // ================= CREATE =================
-  const handleCreate = async () => {
-    try {
-      await createCertificateAPI({
-        studentId,
-        courseId,
-        grade,
-      });
-
-      toast({ title: "Created", status: "success" });
-      onClose();
-      fetchCerts();
-    } catch (err) {
-      toast({ title: "Create failed", status: "error" });
-    }
-  };
 
   // ================= DELETE =================
   const handleDelete = async (id) => {
-    if (!window.confirm("Delete?")) return;
+    if (!window.confirm("Delete this certificate?")) return;
 
     try {
       await deleteCertificateAPI(id);
-      toast({ title: "Deleted", status: "success" });
-      fetchCerts();
-    } catch {
-      toast({ title: "Delete failed", status: "error" });
+
+      const updated = certificates.filter((c) => c._id !== id);
+      setCertificates(updated);
+
+      toast({
+        title: "Deleted successfully",
+        status: "success",
+      });
+    } catch (err) {
+      toast({
+        title: err.message || "Delete failed",
+        status: "error",
+      });
     }
   };
 
-  // ================= UI =================
+  // ================= LOADING =================
+  if (loading || authLoading) {
+    return (
+      <Flex justify="center" mt={10}>
+        <Spinner size="lg" />
+      </Flex>
+    );
+  }
+
   return (
     <Box>
-      <Flex justify="space-between" mb={6}>
-        <Heading>Certificate Management</Heading>
-
-        {user?.role === "INSTRUCTOR" && (
-          <Button colorScheme="blue" onClick={onOpen}>
-            + Create
-          </Button>
-        )}
+      {/* HEADER */}
+      <Flex justify="space-between" align="center" mb={6}>
+        <Heading size="lg">Manage Certificates</Heading>
       </Flex>
 
-      {loading ? (
-        <Spinner />
+      {/* CONTENT */}
+      {certificates.length === 0 ? (
+        <Text>No certificates found</Text>
       ) : (
-        <Table>
-          <Thead>
-            <Tr>
-              <Th>Student</Th>
-              <Th>Course</Th>
-              <Th>Grade</Th>
-              <Th>Action</Th>
-            </Tr>
-          </Thead>
+        <SimpleGrid columns={[1, 2, 3]} spacing={6}>
+          {certificates.map((cert) => (
+            <Box
+              key={cert._id}
+              bg="white"
+              p={5}
+              borderRadius="lg"
+              boxShadow="md"
+            >
+              {/* STUDENT */}
+              <Text fontWeight="bold" mb={2}>
+                {cert.student?.name}
+              </Text>
 
-          <Tbody>
-            {certs.map((c) => (
-              <Tr key={c._id}>
-                <Td>{c.student?.name}</Td>
-                <Td>{c.course?.title}</Td>
-                <Td>{c.grade}</Td>
+              <Text fontSize="sm" color="gray.500" mb={2}>
+                {cert.student?.email}
+              </Text>
 
-                <Td>
-                  {user?.role === "ADMIN" && (
-                    <Button
-                      size="sm"
-                      colorScheme="red"
-                      onClick={() => handleDelete(c._id)}
-                    >
-                      Delete
-                    </Button>
-                  )}
-                </Td>
-              </Tr>
-            ))}
-          </Tbody>
-        </Table>
+              {/* COURSE */}
+              <Text fontSize="md" mb={2}>
+                Course: {cert.course?.title}
+              </Text>
+
+              {/* GRADE */}
+              <Text fontSize="sm" mb={2}>
+                Grade: {cert.grade ?? "N/A"}
+              </Text>
+
+              {/* DATE */}
+              <Text fontSize="sm" color="gray.500" mb={4}>
+                Issued:{" "}
+                {new Date(cert.issuedAt).toLocaleDateString()}
+              </Text>
+
+              {/* ACTION */}
+              <Flex gap={2}>
+                <Button
+                  size="sm"
+                  colorScheme="red"
+                  onClick={() => handleDelete(cert._id)}
+                >
+                  Delete
+                </Button>
+
+                {cert.certificateUrl && (
+                  <Button
+                    size="sm"
+                    colorScheme="blue"
+                    onClick={() =>
+                      window.open(cert.certificateUrl, "_blank")
+                    }
+                  >
+                    View
+                  </Button>
+                )}
+              </Flex>
+            </Box>
+          ))}
+        </SimpleGrid>
       )}
-
-      {/* MODAL */}
-      <Modal isOpen={isOpen} onClose={onClose}>
-        <ModalOverlay />
-        <ModalContent>
-          <ModalHeader>Create Certificate</ModalHeader>
-          <ModalCloseButton />
-
-          <ModalBody>
-            <Input
-              placeholder="Student ID"
-              mb={3}
-              onChange={(e) => setStudentId(e.target.value)}
-            />
-            <Input
-              placeholder="Course ID"
-              mb={3}
-              onChange={(e) => setCourseId(e.target.value)}
-            />
-            <Input
-              placeholder="Grade"
-              onChange={(e) => setGrade(e.target.value)}
-            />
-          </ModalBody>
-
-          <ModalFooter>
-            <Button onClick={handleCreate}>Create</Button>
-          </ModalFooter>
-        </ModalContent>
-      </Modal>
     </Box>
   );
 };
 
-export default CertificateManagementPage;
+export default ManageCertificatePage;

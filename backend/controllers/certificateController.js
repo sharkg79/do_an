@@ -1,198 +1,109 @@
-const mongoose = require("mongoose");
+const Certificate = require("../models/Certificate");
 const Assignment = require("../models/Assignment");
 const Submission = require("../models/Submission");
-const Test = require("../models/Test");
-const TestSubmission = require("../models/TestSubmission");
-const Certificate = require("../models/Certificate");
-const Course = require("../models/Course");
-const Enrollment = require("../models/Enrollment");
+const Class = require("../models/Class");
 
-const PDFDocument = require("pdfkit");
-const fs = require("fs");
-const path = require("path");
-
-// ================= GENERATE =================
-const generateCertificate = async (req, res) => {
+// ================= AUTO CREATE =================
+const createCertificateIfEligible = async ({
+  studentId,
+  classId,
+  finalScore,
+}) => {
   try {
-    const { courseId } = req.params;
-    const studentId = req.user._id;
+    // ❌ chưa đủ điểm
+    if (finalScore < 80) return null;
 
-    if (!mongoose.Types.ObjectId.isValid(courseId)) {
-      return res.status(400).json({ message: "Invalid course ID" });
-    }
+    // ================= GET CLASS =================
+    const classData = await Class.findById(classId).populate("course");
 
-    const course = await Course.findById(courseId);
-    if (!course) {
-      return res.status(404).json({ message: "Course not found" });
-    }
+    if (!classData) return null;
 
-    // ❗ check enrollment
-    const enrollment = await Enrollment.findOne({
-      student: studentId,
-      course: courseId,
-      isPaid: true
-    });
+    const courseId = classData.course._id;
 
-    if (!enrollment) {
-      return res.status(403).json({ message: "Not enrolled" });
-    }
+    // ================= CHECK ASSIGNMENTS =================
+    const assignments = await Assignment.find({ classId });
 
-    // ❗ check đã có certificate chưa
-    const existingCert = await Certificate.findOne({
-      student: studentId,
-      course: courseId
-    });
-
-    if (existingCert) {
-      return res.json({
-        message: "Certificate already exists",
-        certificate: existingCert
-      });
-    }
-
-    // ===== CHECK COMPLETION =====
-
-    // ASSIGNMENTS
-    const assignments = await Assignment.find({ course: courseId });
+    // nếu không có assignment → không cấp
+    if (assignments.length === 0) return null;
 
     const submissions = await Submission.find({
       student: studentId,
-      assignment: { $in: assignments.map(a => a._id) }
+      assignment: { $in: assignments.map((a) => a._id) },
     });
 
-    if (assignments.length !== submissions.length) {
-      return res.status(400).json({
-        message: "Complete all assignments"
-      });
+    // ❌ chưa nộp đủ
+    if (submissions.length !== assignments.length) {
+      return null;
     }
 
-    // TESTS
-    const tests = await Test.find({ course: courseId });
-
-    const testSubs = await TestSubmission.find({
-      student: studentId,
-      test: { $in: tests.map(t => t._id) }
-    });
-
-    if (tests.length !== testSubs.length) {
-      return res.status(400).json({
-        message: "Complete all tests"
-      });
-    }
-// ================= CREATE (INSTRUCTOR) =================
-const createCertificateByInstructor = async (req, res) => {
-  try {
-    const { studentId, courseId, grade } = req.body;
-
-    const cert = await Certificate.create({
+    // ================= CHECK EXIST =================
+    const existed = await Certificate.findOne({
       student: studentId,
       course: courseId,
-      grade,
-      certificateUrl: "" // optional
     });
 
-    res.json(cert);
-  } catch (error) {
-    res.status(500).json({ message: error.message });
-  }
-};
-// ================= GET ALL =================
-const getAllCertificates = async (req, res) => {
-  try {
-    const certs = await Certificate.find()
-      .populate("student", "name email")
-      .populate("course", "title");
+    if (existed) return existed;
 
-    res.json(certs);
-  } catch (error) {
-    res.status(500).json({ message: error.message });
-  }
-};
-// ================= DELETE =================
-const deleteCertificate = async (req, res) => {
-  try {
-    await Certificate.findByIdAndDelete(req.params.id);
-    res.json({ message: "Deleted" });
-  } catch (error) {
-    res.status(500).json({ message: error.message });
-  }
-};
-    // ===== CALCULATE SCORE =====
-    const assignmentScore = submissions.reduce((sum, s) => sum + s.score, 0);
-    const testScore = testSubs.reduce((sum, s) => sum + s.score, 0);
-
-    const totalScore = assignmentScore + testScore;
-
-    // ===== GENERATE PDF =====
-    const fileName = `certificate_${studentId}_${courseId}.pdf`;
-    const dirPath = path.join(__dirname, "../uploads/certificates");
-
-    if (!fs.existsSync(dirPath)) {
-      fs.mkdirSync(dirPath, { recursive: true });
-    }
-
-    const filePath = path.join(dirPath, fileName);
-
-    const doc = new PDFDocument();
-
-    const stream = fs.createWriteStream(filePath);
-    doc.pipe(stream);
-
-    doc.fontSize(25).text("Certificate of Completion", { align: "center" });
-    doc.moveDown();
-
-    doc.fontSize(18).text("This certifies that", { align: "center" });
-    doc.fontSize(20).text(req.user.name, { align: "center", underline: true });
-
-    doc.moveDown();
-    doc.text("has completed the course", { align: "center" });
-    doc.fontSize(20).text(course.title, { align: "center", underline: true });
-
-    doc.moveDown();
-    doc.text(`Score: ${totalScore}`, { align: "center" });
-    doc.text(`Date: ${new Date().toLocaleDateString()}`, { align: "center" });
-
-    doc.end();
-
-    // đợi ghi file xong
-    await new Promise(resolve => stream.on("finish", resolve));
-
-    // ===== SAVE DB =====
-    const cert = await Certificate.create({
+    // ================= CREATE =================
+    const certificate = await Certificate.create({
       student: studentId,
       course: courseId,
-      certificateUrl: `/uploads/certificates/${fileName}`,
-      grade: totalScore
+      grade: finalScore,
+      certificateUrl: "", // có thể generate sau
     });
 
-    res.json({
-      message: "Certificate generated",
-      certificate: cert
-    });
-
+    return certificate;
   } catch (error) {
-    if (error.code === 11000) {
-      return res.status(400).json({ message: "Certificate already exists" });
-    }
-    res.status(500).json({ message: error.message });
+    console.error("AUTO CERT ERROR:", error);
+    return null;
   }
 };
 
 // ================= GET MY =================
 const getMyCertificates = async (req, res) => {
   try {
-    const certs = await Certificate.find({
-      student: req.user._id
-    }).populate("course", "title");
+    const certificates = await Certificate.find({
+      student: req.user._id,
+    })
+      .populate("course", "title")
+      .sort({ createdAt: -1 });
 
-    res.json(certs);
+    res.json(certificates);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
 
+// ================= ADMIN GET ALL =================
+const getAllCertificates = async (req, res) => {
+  try {
+    const certificates = await Certificate.find()
+      .populate("student", "name email")
+      .populate("course", "title")
+      .sort({ createdAt: -1 });
+
+    res.json(certificates);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+// ================= DELETE (OPTIONAL ADMIN) =================
+const deleteCertificate = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    await Certificate.findByIdAndDelete(id);
+
+    res.json({ message: "Deleted certificate" });
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
 };
 
 module.exports = {
-  generateCertificate,
-  getMyCertificates
+  createCertificateIfEligible, // ⚠️ internal
+  getMyCertificates,
+  getAllCertificates,
+  deleteCertificate,
 };

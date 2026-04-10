@@ -211,7 +211,7 @@ const CourseDetailPage = () => {
                     color="white"
                     size="lg"
                     _hover={{ bg: "green.500" }}
-                    onClick={() => navigate(`/classes/${selectedClass}`)}
+                    onClick={() => navigate(`/classes/${selectedClass}/lessons`)}
                   >
                     Join Class
                   </Button>

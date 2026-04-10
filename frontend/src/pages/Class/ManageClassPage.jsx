@@ -135,7 +135,7 @@ const ManageClassPage = () => {
 
       {user.role === "ADMIN" && (
         <Button
-          colorScheme="teal"
+          colorScheme="blue"
           onClick={() => navigate("/dashboard/create-class")}
         >
           + Add Class

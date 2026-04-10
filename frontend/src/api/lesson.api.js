@@ -52,3 +52,9 @@ export const deleteLessonAPI = async (lessonId) => {
   );
   return res.data;
 };
+
+// ====================== GET LESSON BY ID ======================
+export const getLessonByIdAPI = async (lessonId) => {
+  const res = await axiosInstance.get(`/api/lessons/${lessonId}`);
+  return res.data;
+};

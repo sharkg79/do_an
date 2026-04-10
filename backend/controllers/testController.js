@@ -1,155 +1,157 @@
 const mongoose = require("mongoose");
 const Test = require("../models/Test");
+const Class = require("../models/Class");
+
+// nếu bạn có model này
 const TestSubmission = require("../models/TestSubmission");
-const Course = require("../models/Course");
-const Enrollment = require("../models/Enrollment");
+
+// dùng để auto certificate
+const { createCertificateIfEligible } = require("./certificateController");
 
 // ================= CREATE =================
 const createTest = async (req, res) => {
   try {
-    const { title, course,class: classId, questions, totalMarks, dueDate } = req.body;
+    const { title, classId, questions, dueDate } = req.body;
 
-    if (!mongoose.Types.ObjectId.isValid(course)) {
-      return res.status(400).json({ message: "Invalid course ID" });
+    if (!title || !classId) {
+      return res.status(400).json({
+        message: "Title and classId are required",
+      });
     }
 
-    const courseExist = await Course.findById(course);
+    const classData = await Class.findById(classId);
 
-    if (!courseExist) {
-      return res.status(404).json({ message: "Course not found" });
+    if (!classData) {
+      return res.status(404).json({ message: "Class not found" });
     }
 
-    // check quyền instructor
+    // ✅ instructor phải thuộc class
     if (
       req.user.role === "INSTRUCTOR" &&
-      courseExist.instructor.toString() !== req.user._id.toString()
+      !classData.instructor.equals(req.user._id)
     ) {
-      return res.status(403).json({ message: "Not your course" });
+      return res.status(403).json({ message: "Not your class" });
     }
 
     const test = await Test.create({
       title,
-      course,
-      instructor: req.user._id,
       class: classId,
+      instructor: req.user._id,
       questions,
-      totalMarks,
-      dueDate
+      dueDate,
     });
 
     res.status(201).json(test);
-
-  } catch (err) {
-    res.status(500).json({ message: err.message });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
   }
 };
+
+// ================= GET ALL =================
+const getTests = async (req, res) => {
+  try {
+    const { classId } = req.query;
+
+    let filter = {};
+
+    if (req.user.role === "INSTRUCTOR") {
+      filter.instructor = req.user._id;
+    }
+
+    if (classId) {
+      filter.class = classId;
+    }
+
+    const tests = await Test.find(filter)
+      .populate("instructor", "name email")
+      .populate("class", "name")
+      .sort({ createdAt: -1 });
+
+    res.json(tests);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
 // ================= UPDATE =================
 const updateTest = async (req, res) => {
   try {
     const { testId } = req.params;
 
     if (!mongoose.Types.ObjectId.isValid(testId)) {
-      return res.status(400).json({ message: "Invalid test ID" });
+      return res.status(400).json({ message: "Invalid ID" });
     }
 
     const test = await Test.findById(testId);
 
     if (!test) {
-      return res.status(404).json({ message: "Test not found" });
+      return res.status(404).json({ message: "Not found" });
     }
 
-    // check quyền
+    // ✅ quyền
     if (
-      req.user.role === "INSTRUCTOR" &&
+      req.user.role !== "ADMIN" &&
       test.instructor.toString() !== req.user._id.toString()
     ) {
-      return res.status(403).json({ message: "Not your test" });
+      return res.status(403).json({ message: "Forbidden" });
     }
 
-    // chỉ cho update field an toàn
-    const allowedFields = ["title", "questions", "totalMarks", "dueDate"];
+    const allowed = ["title", "questions", "dueDate"];
     const updateData = {};
 
-    allowedFields.forEach((field) => {
-      if (req.body[field] !== undefined) {
-        updateData[field] = req.body[field];
-      }
+    allowed.forEach((f) => {
+      if (req.body[f] !== undefined) updateData[f] = req.body[f];
     });
 
-    const updated = await Test.findByIdAndUpdate(
-      testId,
-      updateData,
-      { new: true }
-    );
-
-    res.json({
-      message: "Test updated successfully",
-      test: updated
+    const updated = await Test.findByIdAndUpdate(testId, updateData, {
+      new: true,
     });
 
+    res.json(updated);
   } catch (error) {
+    console.error("UPDATE TEST ERROR:", error);
     res.status(500).json({ message: error.message });
   }
 };
+
 // ================= DELETE =================
 const deleteTest = async (req, res) => {
   try {
     const { testId } = req.params;
 
     if (!mongoose.Types.ObjectId.isValid(testId)) {
-      return res.status(400).json({ message: "Invalid test ID" });
+      return res.status(400).json({ message: "Invalid ID" });
     }
 
     const test = await Test.findById(testId);
 
     if (!test) {
-      return res.status(404).json({ message: "Test not found" });
+      return res.status(404).json({ message: "Not found" });
     }
 
-    // check quyền
     if (
-      req.user.role === "INSTRUCTOR" &&
+      req.user.role !== "ADMIN" &&
       test.instructor.toString() !== req.user._id.toString()
     ) {
-      return res.status(403).json({ message: "Not your test" });
+      return res.status(403).json({ message: "Forbidden" });
     }
 
-    // ❗ xóa submission liên quan
     await TestSubmission.deleteMany({ test: testId });
-
     await test.deleteOne();
 
-    res.json({ message: "Test deleted successfully" });
-
+    res.json({ message: "Deleted" });
   } catch (error) {
+    console.error("DELETE TEST ERROR:", error);
     res.status(500).json({ message: error.message });
   }
 };
-// ================= GET =================
-const getTestsByCourse = async (req, res) => {
-  try {
-    const { courseId } = req.params;
 
-    const tests = await Test.find({ course: courseId })
-      .populate("instructor", "name email");
-
-    res.json(tests);
-
-  } catch (err) {
-    res.status(500).json({ message: err.message });
-  }
-};
-
-// ================= SUBMIT =================
+// ================= SUBMIT TEST =================
 const submitTest = async (req, res) => {
   try {
     const { testId } = req.params;
     const { answers } = req.body;
-    const studentId = req.user._id;
-
-    if (!mongoose.Types.ObjectId.isValid(testId)) {
-      return res.status(400).json({ message: "Invalid test ID" });
-    }
+    // answers: [{ questionId, selectedOption }]
 
     const test = await Test.findById(testId);
 
@@ -157,168 +159,109 @@ const submitTest = async (req, res) => {
       return res.status(404).json({ message: "Test not found" });
     }
 
-    // check enrollment
-    const enrollment = await Enrollment.findOne({
-      student: studentId,
-      course: test.course,
-      isPaid: true
-    });
-
-    if (!enrollment) {
-      return res.status(403).json({ message: "Not enrolled" });
-    }
-
-    // check deadline
+    // deadline
     if (test.dueDate && new Date() > test.dueDate) {
       return res.status(400).json({ message: "Deadline passed" });
     }
 
-    // chống submit lại
+    // check class
+    const classData = await Class.findById(test.class);
+    const isStudent = classData.students.includes(req.user._id);
+
+    if (!isStudent) {
+      return res.status(403).json({ message: "Not enrolled" });
+    }
+
+    // check đã làm chưa
     const existed = await TestSubmission.findOne({
       test: testId,
-      student: studentId
+      student: req.user._id,
     });
 
     if (existed) {
       return res.status(400).json({ message: "Already submitted" });
     }
 
-    // ===== CHẤM ĐIỂM CHUẨN =====
+    // ================= AUTO GRADE =================
     let correct = 0;
 
-    answers.forEach((ans) => {
-      const question = test.questions.id(ans.questionId);
+    test.questions.forEach((q) => {
+      const ans = answers.find(
+        (a) => a.questionId.toString() === q._id.toString()
+      );
 
-      if (question && ans.selectedOption === question.correctOption) {
+      if (ans && ans.selectedOption === q.correctOption) {
         correct++;
       }
     });
 
-    const score = (correct / test.questions.length) * test.totalMarks;
+    const score =
+      (correct / test.questions.length) * test.totalMarks;
 
     const submission = await TestSubmission.create({
       test: testId,
-      student: studentId,
+      classId: test.class, // ✅ QUAN TRỌNG
+      student: req.user._id,
       answers,
-      score
+      score,
+      totalQuestions: test.questions.length,
+    });
+
+    // ================= AUTO CERTIFICATE =================
+    const { createCertificateIfEligible } = require("./certificateController");
+
+    await createCertificateIfEligible({
+      studentId: req.user._id,
+      classId: test.class,
+      finalScore: score,
     });
 
     res.json({
       message: "Submitted",
       score,
-      submission
+      correct,
+      total: test.questions.length,
+      submission,
     });
-
-  } catch (err) {
-    if (err.code === 11000) {
-      return res.status(400).json({ message: "Already submitted" });
-    }
-    res.status(500).json({ message: err.message });
+  } catch (error) {
+    console.error("SUBMIT TEST ERROR:", error);
+    res.status(500).json({ message: error.message });
   }
 };
 
 // ================= GET SUBMISSIONS =================
-const getSubmissions = async (req, res) => {
+const getTestSubmissions = async (req, res) => {
   try {
     const { testId } = req.params;
 
     const test = await Test.findById(testId);
 
     if (!test) {
-      return res.status(404).json({ message: "Test not found" });
+      return res.status(404).json({ message: "Not found" });
     }
 
-    // check quyền
     if (
-      req.user.role === "INSTRUCTOR" &&
-      test.instructor.toString() !== req.user._id.toString()
+      req.user.role !== "ADMIN" &&
+      !test.instructor.equals(req.user._id)
     ) {
-      return res.status(403).json({ message: "Not your test" });
+      return res.status(403).json({ message: "Forbidden" });
     }
 
     const submissions = await TestSubmission.find({ test: testId })
-      .populate("student", "name email");
+      .populate("student", "name email")
+      .sort({ createdAt: -1 });
 
     res.json(submissions);
-
-  } catch (err) {
-    res.status(500).json({ message: err.message });
-  }
-};
-// ================= GET BY ID =================
-const getTestById = async (req, res) => {
-  try {
-    const { testId } = req.params;
-
-    const test = await Test.findById(testId);
-
-    if (!test) {
-      return res.status(404).json({ message: "Test not found" });
-    }
-
-    res.json(test);
-
-  } catch (err) {
-    res.status(500).json({ message: err.message });
-  }
-};
-// ================= DELETE SUBMISSION =================
-const deleteSubmission = async (req, res) => {
-  try {
-    const { id } = req.params;
-
-    const submission = await TestSubmission.findById(id).populate("test");
-
-    if (!submission) {
-      return res.status(404).json({ message: "Submission not found" });
-    }
-
-    // check quyền instructor
-    if (
-      req.user.role === "INSTRUCTOR" &&
-      submission.test.instructor.toString() !== req.user._id.toString()
-    ) {
-      return res.status(403).json({ message: "Not your test" });
-    }
-
-    await submission.deleteOne();
-
-    res.json({ message: "Submission deleted" });
-
-  } catch (err) {
-    res.status(500).json({ message: err.message });
-  }
-};
-const getAllTests = async (req, res) => {
-  try {
-    let tests;
-
-    if (req.user.role === "INSTRUCTOR") {
-      tests = await Test.find({ instructor: req.user._id })
-        .populate("course", "title")
-        .populate("class", "name");
-    } else {
-      // ADMIN
-      tests = await Test.find()
-        .populate("course", "title")
-        .populate("class", "name")
-        .populate("instructor", "name");
-    }
-
-    res.json(tests);
-  } catch (err) {
-    res.status(500).json({ message: err.message });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
   }
 };
 
 module.exports = {
   createTest,
+  getTests,
   updateTest,
   deleteTest,
-  getTestsByCourse,
   submitTest,
-  getSubmissions,
-  getTestById,
-  deleteSubmission,
-  getAllTests
+  getTestSubmissions,
 };

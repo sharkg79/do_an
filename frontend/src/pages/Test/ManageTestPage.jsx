@@ -8,60 +8,48 @@ import {
   Spinner,
   useToast,
   Input,
-  Badge,
 } from "@chakra-ui/react";
 
 import { useEffect, useState } from "react";
 import {
-  getAllTestsAPI,
+  getTestsAPI,
   deleteTestAPI,
 } from "../../api/test.api";
 
-import axiosInstance from "../../api/axios";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useParams } from "react-router-dom";
+import { useAuth } from "../../context/AuthContext";
 
 const ManageTestPage = () => {
+  const { classId } = useParams(); // ✅ giống assignment
   const [tests, setTests] = useState([]);
   const [filteredTests, setFilteredTests] = useState([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
 
-  const [user, setUser] = useState(null); // ✅ thêm
+  const { user, loading: authLoading } = useAuth();
 
   const navigate = useNavigate();
   const toast = useToast();
 
-  // ================= GET USER =================
-  const fetchUser = async () => {
-    try {
-      const res = await axiosInstance.get("/api/auth/me");
-      setUser(res.data);
-    } catch (err) {
-      console.error("Fetch user error:", err);
-    }
-  };
-
-  // ================= FETCH TESTS =================
-  const fetchTests = async () => {
-    try {
-      const data = await getAllTestsAPI();
-      setTests(data);
-      setFilteredTests(data);
-    } catch (err) {
-      console.error(err);
-      toast({
-        title: "Error loading tests",
-        status: "error",
-      });
-    } finally {
-      setLoading(false);
-    }
-  };
-
+  // ================= FETCH =================
   useEffect(() => {
-    fetchUser();   // ✅ gọi user
-    fetchTests();
-  }, []);
+    const load = async () => {
+      try {
+        const data = await getTestsAPI(classId);
+        setTests(data);
+        setFilteredTests(data);
+      } catch (err) {
+        toast({
+          title: err.message || "Fetch failed",
+          status: "error",
+        });
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    load();
+  }, [classId]);
 
   // ================= SEARCH =================
   useEffect(() => {
@@ -87,26 +75,49 @@ const ManageTestPage = () => {
         status: "success",
       });
     } catch (err) {
-      console.error(err);
       toast({
-        title: "Delete failed",
+        title: err.message || "Delete failed",
         status: "error",
       });
     }
   };
 
-  // ================= UI =================
+  // ================= PERMISSION =================
+  const canEdit = (test) => {
+    if (user?.role?.toUpperCase() === "ADMIN") return true;
+
+    if (user?.role?.toUpperCase() === "INSTRUCTOR") {
+      return (
+        test.instructor?._id?.toString() ===
+        user._id?.toString()
+      );
+    }
+
+    return false;
+  };
+
+  // ================= LOADING =================
+  if (loading || authLoading) {
+    return (
+      <Flex justify="center" mt={10}>
+        <Spinner size="lg" />
+      </Flex>
+    );
+  }
+
   return (
     <Box>
       {/* HEADER */}
       <Flex justify="space-between" align="center" mb={6}>
         <Heading size="lg">Manage Tests</Heading>
 
-        {/* chỉ instructor mới tạo */}
-        {user?.role === "INSTRUCTOR" && (
+        {(user?.role?.toUpperCase() === "INSTRUCTOR" ||
+          user?.role?.toUpperCase() === "ADMIN") && (
           <Button
             colorScheme="blue"
-            onClick={() => navigate("/dashboard/create-test")}
+            onClick={() =>
+              navigate(`/dashboard/create-test/${classId}`)
+            }
           >
             + Create Test
           </Button>
@@ -122,11 +133,7 @@ const ManageTestPage = () => {
       />
 
       {/* CONTENT */}
-      {loading ? (
-        <Flex justify="center" mt={10}>
-          <Spinner size="lg" />
-        </Flex>
-      ) : filteredTests.length === 0 ? (
+      {filteredTests.length === 0 ? (
         <Text>No tests found</Text>
       ) : (
         <SimpleGrid columns={[1, 2, 3]} spacing={6}>
@@ -142,51 +149,58 @@ const ManageTestPage = () => {
                 {test.title}
               </Heading>
 
-              <Text fontSize="sm" color="gray.600">
-                Course: {test.course?.title}
-              </Text>
-
               <Text fontSize="sm" color="gray.600" mb={2}>
-                Instructor: {test.instructor?.name || "N/A"}
+                Questions: {test.questions?.length || 0}
               </Text>
 
-              <Badge colorScheme="purple" mb={3}>
-                {test.questions?.length || 0} questions
-              </Badge>
+              <Text fontSize="sm" mb={2}>
+                Total Marks: {test.totalMarks}
+              </Text>
 
-              <Text fontWeight="bold" mb={4}>
-                Total: {test.totalMarks} marks
+              <Text fontSize="sm" mb={2}>
+                Due:{" "}
+                {test.dueDate
+                  ? new Date(test.dueDate).toLocaleDateString()
+                  : "N/A"}
+              </Text>
+
+              <Text fontSize="sm" color="gray.500" mb={4}>
+                Created by: {test.instructor?.name}
               </Text>
 
               <Flex gap={2} wrap="wrap">
-                {/* EDIT - chỉ instructor */}
-                {user?.role === "INSTRUCTOR" && (
-                  <Button
-                    size="sm"
-                    colorScheme="yellow"
-                    onClick={() =>
-                      navigate(`/dashboard/tests/${test._id}`)
-                    }
-                  >
-                    Edit
-                  </Button>
+                {canEdit(test) && (
+                  <>
+                    <Button
+                      size="sm"
+                      colorScheme="yellow"
+                      onClick={() =>
+                        navigate(
+                          `/dashboard/create-test/${classId}`,
+                          { state: { test } }
+                        )
+                      }
+                    >
+                      Edit
+                    </Button>
+
+                    <Button
+                      size="sm"
+                      colorScheme="red"
+                      onClick={() => handleDelete(test._id)}
+                    >
+                      Delete
+                    </Button>
+                  </>
                 )}
 
-                {/* DELETE */}
-                <Button
-                  size="sm"
-                  colorScheme="red"
-                  onClick={() => handleDelete(test._id)}
-                >
-                  Delete
-                </Button>
-
-                {/* SUBMISSIONS */}
                 <Button
                   size="sm"
                   colorScheme="purple"
                   onClick={() =>
-                    navigate(`/dashboard/test-submissions?testId=${test._id}`)
+                    navigate(
+                      `/dashboard/tests/${test._id}/submissions`
+                    )
                   }
                 >
                   Submissions

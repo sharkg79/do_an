@@ -1,13 +1,38 @@
 const express = require("express");
 const router = express.Router();
+
+const {
+  getMyCertificates,
+  getAllCertificates,
+  deleteCertificate,
+} = require("../controllers/certificateController");
+
 const auth = require("../middlewares/auth");
 const role = require("../middlewares/role");
-const { generateCertificate, getMyCertificates } = require("../controllers/certificateController");
 
-// Student generate certificate for a course
-router.post("/generate/:courseId", auth, role(["STUDENT"]), generateCertificate);
+// ================= GET MY CERTIFICATES =================
+// STUDENT lấy certificate của mình
+router.get(
+  "/my",
+  auth,
+  role(["STUDENT"]),
+  getMyCertificates
+);
 
-// Student get all their certificates
-router.get("/my", auth, role(["STUDENT"]), getMyCertificates);
+// ================= ADMIN GET ALL =================
+router.get(
+  "/",
+  auth,
+  role(["ADMIN"]),
+  getAllCertificates
+);
+
+// ================= DELETE =================
+router.delete(
+  "/:id",
+  auth,
+  role(["ADMIN"]),
+  deleteCertificate
+);
 
 module.exports = router;

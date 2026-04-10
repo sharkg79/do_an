@@ -33,30 +33,36 @@ const ManageAssignmentPage = () => {
 
   // ================= FETCH =================
   const fetchAssignments = async () => {
+  try {
+    const data = await getAssignmentsAPI(classId);
+
+    setAssignments(data);
+    setFilteredAssignments(data);
+  } catch (err) {
+    toast({
+      title: err.message,
+      status: "error",
+    });
+  } finally {
+    setLoading(false);
+  }
+};
+
+  useEffect(() => {
+  const load = async () => {
     try {
-      const data = await getAssignmentsAPI();
-
-      // ✅ FILTER theo class
-      const filtered = data.filter(
-        (a) => a.classId?.toString() === classId
-      );
-
-      setAssignments(filtered);
-      setFilteredAssignments(filtered);
+      const data = await getAssignmentsAPI(classId); // có hoặc không có classId đều gọi
+      setAssignments(data);
+      setFilteredAssignments(data);
     } catch (err) {
       console.error(err);
-      toast({
-        title: err.message || "Error loading assignments",
-        status: "error",
-      });
     } finally {
       setLoading(false);
     }
   };
 
-  useEffect(() => {
-    if (classId) fetchAssignments();
-  }, [classId]);
+  load();
+}, [classId]);
 
   // ================= SEARCH =================
   useEffect(() => {
@@ -201,7 +207,7 @@ const ManageAssignmentPage = () => {
                   size="sm"
                   colorScheme="purple"
                   onClick={() =>
-                    navigate(`/dashboard/submissions/${assignment._id}`)
+                    navigate(`/dashboard/assignments/${assignment._id}/submissions`)
                   }
                 >
                   Submissions

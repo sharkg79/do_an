@@ -10,52 +10,52 @@ import {
   Input,
 } from "@chakra-ui/react";
 
-import { useEffect, useState, useContext } from "react";
+import { useEffect, useState } from "react";
 import {
-  getSubmissionsByAssignmentAPI,
+  getSubmissionsAPI,
   deleteSubmissionAPI,
   gradeSubmissionAPI,
 } from "../../api/submission.api";
 
-import { useParams } from "react-router-dom";
-import { AuthContext } from "../../context/AuthContext";
+import { useNavigate, useParams } from "react-router-dom";
+import { useAuth } from "../../context/AuthContext";
 
 const ManageSubmissionPage = () => {
-  const { assignmentId } = useParams();
-  const { user } = useContext(AuthContext);
-
+  const { assignmentId } = useParams(); // ✅ QUAN TRỌNG
   const [submissions, setSubmissions] = useState([]);
   const [filteredSubmissions, setFilteredSubmissions] = useState([]);
   const [loading, setLoading] = useState(true);
-
   const [search, setSearch] = useState("");
 
+  const { user, loading: authLoading } = useAuth();
+
+  const navigate = useNavigate();
   const toast = useToast();
 
   // ================= FETCH =================
-  const fetchSubmissions = async () => {
-    try {
-      const data = await getSubmissionsByAssignmentAPI(assignmentId);
-      setSubmissions(data);
-      setFilteredSubmissions(data);
-    } catch (err) {
-      toast({
-        title: "Error loading submissions",
-        status: "error",
-      });
-    } finally {
-      setLoading(false);
-    }
-  };
-
   useEffect(() => {
-    fetchSubmissions();
+    const load = async () => {
+      try {
+        const data = await getSubmissionsAPI(assignmentId); // ✅ dùng chung API
+        setSubmissions(data);
+        setFilteredSubmissions(data);
+      } catch (err) {
+        toast({
+          title: err.message || "Fetch failed",
+          status: "error",
+        });
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    load();
   }, [assignmentId]);
 
   // ================= SEARCH =================
   useEffect(() => {
     const filtered = submissions.filter((s) =>
-      s.student?.name.toLowerCase().includes(search.toLowerCase())
+      s.student?.name?.toLowerCase().includes(search.toLowerCase())
     );
     setFilteredSubmissions(filtered);
   }, [search, submissions]);
@@ -72,45 +72,69 @@ const ManageSubmissionPage = () => {
       setFilteredSubmissions(updated);
 
       toast({
-        title: "Submission deleted",
+        title: "Deleted",
         status: "success",
       });
     } catch (err) {
       toast({
-        title: "Delete failed",
+        title: err.message || "Delete failed",
         status: "error",
       });
     }
   };
 
   // ================= GRADE =================
-  const handleGrade = async (id) => {
-    const score = prompt("Enter score (0-100):");
+  const handleGrade = async (submission) => {
+    const score = prompt("Enter score:");
     if (score === null) return;
 
-    const feedback = prompt("Enter feedback:");
-
     try {
-      await gradeSubmissionAPI(id, {
-        score: Number(score),
-        feedback,
+      const updated = await gradeSubmissionAPI(submission._id, {
+        score,
       });
 
+      const newList = submissions.map((s) =>
+        s._id === submission._id ? updated.submission : s
+      );
+
+      setSubmissions(newList);
+      setFilteredSubmissions(newList);
+
       toast({
-        title: "Graded successfully",
+        title: "Graded",
         status: "success",
       });
-
-      fetchSubmissions();
     } catch (err) {
       toast({
-        title: err.response?.data?.message || "Grade failed",
+        title: err.message || "Grade failed",
         status: "error",
       });
     }
   };
 
-  // ================= UI =================
+  // ================= PERMISSION =================
+  const canManage = (submission) => {
+    if (user?.role?.toUpperCase() === "ADMIN") return true;
+
+    if (user?.role?.toUpperCase() === "INSTRUCTOR") {
+      return (
+        submission.assignment?.instructor?.toString() ===
+        user._id?.toString()
+      );
+    }
+
+    return false;
+  };
+
+  // ================= LOADING =================
+  if (loading || authLoading) {
+    return (
+      <Flex justify="center" mt={10}>
+        <Spinner size="lg" />
+      </Flex>
+    );
+  }
+
   return (
     <Box>
       {/* HEADER */}
@@ -127,73 +151,75 @@ const ManageSubmissionPage = () => {
       />
 
       {/* CONTENT */}
-      {loading ? (
-        <Flex justify="center" mt={10}>
-          <Spinner size="lg" />
-        </Flex>
-      ) : filteredSubmissions.length === 0 ? (
+      {filteredSubmissions.length === 0 ? (
         <Text>No submissions found</Text>
       ) : (
         <SimpleGrid columns={[1, 2, 3]} spacing={6}>
-          {filteredSubmissions.map((s) => (
+          {filteredSubmissions.map((submission) => (
             <Box
-              key={s._id}
+              key={submission._id}
               bg="white"
               p={5}
               borderRadius="lg"
               boxShadow="md"
             >
-              {/* STUDENT */}
               <Heading size="sm" mb={2}>
-                {s.student?.name}
+                {submission.assignment?.title || "Assignment"}
               </Heading>
 
-              <Text fontSize="sm" color="gray.600" mb={2}>
-                {s.student?.email}
+              <Text fontSize="sm" mb={2}>
+                Student: {submission.student?.name}
+              </Text>
+
+              <Text fontSize="sm" mb={2}>
+                Email: {submission.student?.email}
+              </Text>
+
+              <Text fontSize="sm" mb={2}>
+                Score: {submission.score || 0}
+              </Text>
+
+              <Text fontSize="sm" mb={2}>
+                Submitted:{" "}
+                {new Date(submission.createdAt).toLocaleDateString()}
               </Text>
 
               {/* FILE */}
-              <Text fontSize="sm" mb={2}>
-                File:{" "}
-                <a
-                  href={`http://localhost:5000${s.fileUrl}`}
-                  target="_blank"
-                  rel="noreferrer"
-                >
-                  {s.fileName || "View"}
-                </a>
-              </Text>
+              <Button
+                size="sm"
+                colorScheme="blue"
+                mb={3}
+                onClick={() =>
+                  window.open(
+                    `http://localhost:5000${submission.fileUrl}`,
+                    "_blank"
+                  )
+                }
+              >
+                View File
+              </Button>
 
-              {/* SCORE */}
-              <Text fontWeight="bold" mb={2}>
-                Score: {s.score}
-              </Text>
-
-              {/* DATE */}
-              <Text fontSize="xs" color="gray.500" mb={4}>
-                {new Date(s.createdAt).toLocaleString()}
-              </Text>
-
-              {/* ACTIONS */}
+              {/* ACTION */}
               <Flex gap={2} wrap="wrap">
-                {/* INSTRUCTOR ONLY */}
-                {user?.role === "INSTRUCTOR" && (
-                  <Button
-                    size="sm"
-                    colorScheme="blue"
-                    onClick={() => handleGrade(s._id)}
-                  >
-                    Grade
-                  </Button>
-                )}
+                {canManage(submission) && (
+                  <>
+                    <Button
+                      size="sm"
+                      colorScheme="green"
+                      onClick={() => handleGrade(submission)}
+                    >
+                      Grade
+                    </Button>
 
-                <Button
-                  size="sm"
-                  colorScheme="red"
-                  onClick={() => handleDelete(s._id)}
-                >
-                  Delete
-                </Button>
+                    <Button
+                      size="sm"
+                      colorScheme="red"
+                      onClick={() => handleDelete(submission._id)}
+                    >
+                      Delete
+                    </Button>
+                  </>
+                )}
               </Flex>
             </Box>
           ))}
