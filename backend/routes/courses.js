@@ -12,6 +12,7 @@ const {
   getCourseById,
   updateCourse,
   deleteCourse,
+  getInstructorCoursesFull,
 } = require("../controllers/courseController");
 
 // ---------------- PUBLIC ROUTES ----------------
@@ -31,4 +32,10 @@ router.put("/:id", auth, authorize(["ADMIN", "INSTRUCTOR"]), updateCourse);
 // DELETE COURSE (ADMIN hoặc INSTRUCTOR)
 router.delete("/:id", auth, authorize(["ADMIN", "INSTRUCTOR"]), deleteCourse);
 
+router.get(
+  "/instructor/full",
+  auth,
+  authorize(["INSTRUCTOR"]),
+  getInstructorCoursesFull
+);
 module.exports = router;

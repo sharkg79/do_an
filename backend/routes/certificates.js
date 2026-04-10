@@ -5,6 +5,8 @@ const {
   getMyCertificates,
   getAllCertificates,
   deleteCertificate,
+  updateCertificate,
+  getCertificateById,
 } = require("../controllers/certificateController");
 
 const auth = require("../middlewares/auth");
@@ -33,6 +35,21 @@ router.delete(
   auth,
   role(["ADMIN"]),
   deleteCertificate
+);
+// ================= UPDATE =================
+router.put(
+  "/:id",
+  auth,
+  role(["ADMIN"]),
+  updateCertificate
+);
+
+// ================= GET DETAIL =================
+router.get(
+  "/:id",
+  auth,
+  role(["ADMIN"]),
+  getCertificateById
 );
 
 module.exports = router;

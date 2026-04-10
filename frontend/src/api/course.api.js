@@ -34,3 +34,8 @@ export const deleteCourseAPI = async (id) => {
   const res = await axiosInstance.delete(`/api/courses/${id}`);
   return res.data;
 };
+
+export const getInstructorCoursesFullAPI = async () => {
+  const res = await axiosInstance.get("/api/courses/instructor/full");
+  return res.data;
+};

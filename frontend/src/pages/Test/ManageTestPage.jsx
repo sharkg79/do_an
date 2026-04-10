@@ -8,6 +8,7 @@ import {
   Spinner,
   useToast,
   Input,
+  HStack,
 } from "@chakra-ui/react";
 
 import { useEffect, useState } from "react";
@@ -20,7 +21,8 @@ import { useNavigate, useParams } from "react-router-dom";
 import { useAuth } from "../../context/AuthContext";
 
 const ManageTestPage = () => {
-  const { classId } = useParams(); // ✅ giống assignment
+  const { classId } = useParams();
+
   const [tests, setTests] = useState([]);
   const [filteredTests, setFilteredTests] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -31,24 +33,32 @@ const ManageTestPage = () => {
   const navigate = useNavigate();
   const toast = useToast();
 
-  // ================= FETCH =================
-  useEffect(() => {
-    const load = async () => {
-      try {
-        const data = await getTestsAPI(classId);
-        setTests(data);
-        setFilteredTests(data);
-      } catch (err) {
-        toast({
-          title: err.message || "Fetch failed",
-          status: "error",
-        });
-      } finally {
-        setLoading(false);
-      }
-    };
+  // ================= PERMISSION =================
+  const canEdit = () => {
+    return ["ADMIN", "INSTRUCTOR"].includes(
+      user?.role?.toUpperCase()
+    );
+  };
 
-    load();
+  // ================= FETCH =================
+  const fetchTests = async () => {
+    try {
+      setLoading(true);
+      const data = await getTestsAPI(classId);
+      setTests(data);
+      setFilteredTests(data);
+    } catch (err) {
+      toast({
+        title: err.message || "Fetch failed",
+        status: "error",
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchTests();
   }, [classId]);
 
   // ================= SEARCH =================
@@ -66,34 +76,18 @@ const ManageTestPage = () => {
     try {
       await deleteTestAPI(id);
 
-      const updated = tests.filter((t) => t._id !== id);
-      setTests(updated);
-      setFilteredTests(updated);
-
       toast({
-        title: "Test deleted",
+        title: "Deleted successfully",
         status: "success",
       });
+
+      fetchTests(); // reload lại cho chắc
     } catch (err) {
       toast({
         title: err.message || "Delete failed",
         status: "error",
       });
     }
-  };
-
-  // ================= PERMISSION =================
-  const canEdit = (test) => {
-    if (user?.role?.toUpperCase() === "ADMIN") return true;
-
-    if (user?.role?.toUpperCase() === "INSTRUCTOR") {
-      return (
-        test.instructor?._id?.toString() ===
-        user._id?.toString()
-      );
-    }
-
-    return false;
   };
 
   // ================= LOADING =================
@@ -106,21 +100,28 @@ const ManageTestPage = () => {
   }
 
   return (
-    <Box>
+    <Box p={6}>
       {/* HEADER */}
-      <Flex justify="space-between" align="center" mb={6}>
+      <Flex
+        justify="space-between"
+        align="center"
+        mb={6}
+        flexWrap="wrap"
+        gap={4}
+      >
         <Heading size="lg">Manage Tests</Heading>
 
-        {(user?.role?.toUpperCase() === "INSTRUCTOR" ||
-          user?.role?.toUpperCase() === "ADMIN") && (
-          <Button
-            colorScheme="blue"
-            onClick={() =>
-              navigate(`/dashboard/create-test/${classId}`)
-            }
-          >
-            + Create Test
-          </Button>
+        {canEdit() && (
+          <HStack>
+            <Button
+              colorScheme="blue"
+              onClick={() =>
+                navigate(`/dashboard/create-test/${classId}`)
+              }
+            >
+              + Create Test
+            </Button>
+          </HStack>
         )}
       </Flex>
 
@@ -132,7 +133,7 @@ const ManageTestPage = () => {
         onChange={(e) => setSearch(e.target.value)}
       />
 
-      {/* CONTENT */}
+      {/* EMPTY */}
       {filteredTests.length === 0 ? (
         <Text>No tests found</Text>
       ) : (
@@ -144,20 +145,24 @@ const ManageTestPage = () => {
               p={5}
               borderRadius="lg"
               boxShadow="md"
+              transition="0.2s"
+              _hover={{ transform: "scale(1.02)" }}
             >
+              {/* TITLE */}
               <Heading size="md" mb={2}>
                 {test.title}
               </Heading>
 
-              <Text fontSize="sm" color="gray.600" mb={2}>
+              {/* INFO */}
+              <Text fontSize="sm" color="gray.600" mb={1}>
                 Questions: {test.questions?.length || 0}
               </Text>
 
-              <Text fontSize="sm" mb={2}>
-                Total Marks: {test.totalMarks}
+              <Text fontSize="sm" mb={1}>
+                Total Marks: {test.totalMarks || 0}
               </Text>
 
-              <Text fontSize="sm" mb={2}>
+              <Text fontSize="sm" mb={1}>
                 Due:{" "}
                 {test.dueDate
                   ? new Date(test.dueDate).toLocaleDateString()
@@ -165,11 +170,12 @@ const ManageTestPage = () => {
               </Text>
 
               <Text fontSize="sm" color="gray.500" mb={4}>
-                Created by: {test.instructor?.name}
+                Created by: {test.instructor?.name || "Unknown"}
               </Text>
 
+              {/* ACTIONS */}
               <Flex gap={2} wrap="wrap">
-                {canEdit(test) && (
+                {canEdit() && (
                   <>
                     <Button
                       size="sm"

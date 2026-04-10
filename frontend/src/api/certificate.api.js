@@ -16,3 +16,14 @@ export const deleteCertificateAPI = async (id) => {
   const res = await axiosInstance.delete(`/api/certificates/${id}`);
   return res.data;
 };
+// UPDATE
+export const updateCertificateAPI = async (id, data) => {
+  const res = await axiosInstance.put(`/api/certificates/${id}`, data);
+  return res.data;
+};
+
+// GET DETAIL
+export const getCertificateByIdAPI = async (id) => {
+  const res = await axiosInstance.get(`/api/certificates/${id}`);
+  return res.data;
+};

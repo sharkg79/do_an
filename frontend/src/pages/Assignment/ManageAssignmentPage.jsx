@@ -20,7 +20,8 @@ import { useNavigate, useParams } from "react-router-dom";
 import { useAuth } from "../../context/AuthContext";
 
 const ManageAssignmentPage = () => {
-  const { classId } = useParams(); // ✅ FIX
+  const { classId } = useParams();
+
   const [assignments, setAssignments] = useState([]);
   const [filteredAssignments, setFilteredAssignments] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -32,37 +33,24 @@ const ManageAssignmentPage = () => {
   const toast = useToast();
 
   // ================= FETCH =================
-  const fetchAssignments = async () => {
-  try {
-    const data = await getAssignmentsAPI(classId);
-
-    setAssignments(data);
-    setFilteredAssignments(data);
-  } catch (err) {
-    toast({
-      title: err.message,
-      status: "error",
-    });
-  } finally {
-    setLoading(false);
-  }
-};
-
   useEffect(() => {
-  const load = async () => {
-    try {
-      const data = await getAssignmentsAPI(classId); // có hoặc không có classId đều gọi
-      setAssignments(data);
-      setFilteredAssignments(data);
-    } catch (err) {
-      console.error(err);
-    } finally {
-      setLoading(false);
-    }
-  };
+    const load = async () => {
+      try {
+        const data = await getAssignmentsAPI(classId);
+        setAssignments(data);
+        setFilteredAssignments(data);
+      } catch (err) {
+        toast({
+          title: err?.response?.data?.message || err.message,
+          status: "error",
+        });
+      } finally {
+        setLoading(false);
+      }
+    };
 
-  load();
-}, [classId]);
+    load();
+  }, [classId]);
 
   // ================= SEARCH =================
   useEffect(() => {
@@ -89,24 +77,17 @@ const ManageAssignmentPage = () => {
       });
     } catch (err) {
       toast({
-        title: err.message || "Delete failed",
+        title: err?.response?.data?.message || err.message,
         status: "error",
       });
     }
   };
 
-  // ================= PERMISSION =================
-  const canEdit = (assignment) => {
-    if (user?.role?.toUpperCase() === "ADMIN") return true;
-
-    if (user?.role?.toUpperCase() === "INSTRUCTOR") {
-      return (
-        assignment.instructor?._id?.toString() ===
-        user._id?.toString()
-      );
-    }
-
-    return false;
+  // ✅ FIX: chỉ check role
+  const canEdit = () => {
+    return ["ADMIN", "INSTRUCTOR"].includes(
+      user?.role?.toUpperCase()
+    );
   };
 
   // ================= LOADING =================
@@ -124,12 +105,11 @@ const ManageAssignmentPage = () => {
       <Flex justify="space-between" align="center" mb={6}>
         <Heading size="lg">Manage Assignments</Heading>
 
-        {(user?.role?.toUpperCase() === "INSTRUCTOR" ||
-          user?.role?.toUpperCase() === "ADMIN") && (
+        {canEdit() && (
           <Button
             colorScheme="blue"
             onClick={() =>
-              navigate(`/dashboard/create-assignment/${classId}`) // ✅ FIX
+              navigate(`/dashboard/create-assignment/${classId}`)
             }
           >
             + Create Assignment
@@ -178,7 +158,7 @@ const ManageAssignmentPage = () => {
               </Text>
 
               <Flex gap={2} wrap="wrap">
-                {canEdit(assignment) && (
+                {canEdit() && (
                   <>
                     <Button
                       size="sm"
@@ -207,7 +187,9 @@ const ManageAssignmentPage = () => {
                   size="sm"
                   colorScheme="purple"
                   onClick={() =>
-                    navigate(`/dashboard/assignments/${assignment._id}/submissions`)
+                    navigate(
+                      `/dashboard/assignments/${assignment._id}/submissions`
+                    )
                   }
                 >
                   Submissions

@@ -117,11 +117,50 @@ async function deleteCourse(req, res) {
     res.status(500).json({ error: "Server error" });
   }
 }
+const getInstructorCoursesFull = async (req, res) => {
+  try {
+    const instructorId = req.user._id;
 
+    // 1. Lấy courses của instructor
+    const courses = await Course.find({ instructor: instructorId }).lean();
+    const courseIds = courses.map(c => c._id);
+
+    // 2. Lấy classes + populate sâu
+    const classes = await Class.find({ course: { $in: courseIds } })
+      .populate("lessons students tests")
+      .populate({
+        path: "assignments",
+        populate: {
+          path: "submissions"
+        }
+      })
+      .lean();
+
+    // 3. Map classes vào course
+    const courseMap = {};
+
+    courses.forEach(c => {
+      courseMap[c._id] = { ...c, classes: [] };
+    });
+
+    classes.forEach(cls => {
+      const courseId = cls.course.toString();
+      if (courseMap[courseId]) {
+        courseMap[courseId].classes.push(cls);
+      }
+    });
+
+    res.json(Object.values(courseMap));
+
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
 module.exports = {
   createCourse,
   getCourses,
   getCourseById,
   updateCourse,
   deleteCourse,
+  getInstructorCoursesFull,
 };

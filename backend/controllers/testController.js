@@ -1,12 +1,14 @@
 const mongoose = require("mongoose");
 const Test = require("../models/Test");
 const Class = require("../models/Class");
-
-// nếu bạn có model này
 const TestSubmission = require("../models/TestSubmission");
 
-// dùng để auto certificate
 const { createCertificateIfEligible } = require("./certificateController");
+
+// ================= HELPER =================
+const isAdminOrInstructor = (user) => {
+  return ["ADMIN", "INSTRUCTOR"].includes(user.role);
+};
 
 // ================= CREATE =================
 const createTest = async (req, res) => {
@@ -19,18 +21,14 @@ const createTest = async (req, res) => {
       });
     }
 
+    if (!isAdminOrInstructor(req.user)) {
+      return res.status(403).json({ message: "Forbidden" });
+    }
+
     const classData = await Class.findById(classId);
 
     if (!classData) {
       return res.status(404).json({ message: "Class not found" });
-    }
-
-    // ✅ instructor phải thuộc class
-    if (
-      req.user.role === "INSTRUCTOR" &&
-      !classData.instructor.equals(req.user._id)
-    ) {
-      return res.status(403).json({ message: "Not your class" });
     }
 
     const test = await Test.create({
@@ -53,10 +51,6 @@ const getTests = async (req, res) => {
     const { classId } = req.query;
 
     let filter = {};
-
-    if (req.user.role === "INSTRUCTOR") {
-      filter.instructor = req.user._id;
-    }
 
     if (classId) {
       filter.class = classId;
@@ -82,18 +76,14 @@ const updateTest = async (req, res) => {
       return res.status(400).json({ message: "Invalid ID" });
     }
 
+    if (!isAdminOrInstructor(req.user)) {
+      return res.status(403).json({ message: "Forbidden" });
+    }
+
     const test = await Test.findById(testId);
 
     if (!test) {
       return res.status(404).json({ message: "Not found" });
-    }
-
-    // ✅ quyền
-    if (
-      req.user.role !== "ADMIN" &&
-      test.instructor.toString() !== req.user._id.toString()
-    ) {
-      return res.status(403).json({ message: "Forbidden" });
     }
 
     const allowed = ["title", "questions", "dueDate"];
@@ -123,17 +113,14 @@ const deleteTest = async (req, res) => {
       return res.status(400).json({ message: "Invalid ID" });
     }
 
+    if (!isAdminOrInstructor(req.user)) {
+      return res.status(403).json({ message: "Forbidden" });
+    }
+
     const test = await Test.findById(testId);
 
     if (!test) {
       return res.status(404).json({ message: "Not found" });
-    }
-
-    if (
-      req.user.role !== "ADMIN" &&
-      test.instructor.toString() !== req.user._id.toString()
-    ) {
-      return res.status(403).json({ message: "Forbidden" });
     }
 
     await TestSubmission.deleteMany({ test: testId });
@@ -151,7 +138,6 @@ const submitTest = async (req, res) => {
   try {
     const { testId } = req.params;
     const { answers } = req.body;
-    // answers: [{ questionId, selectedOption }]
 
     const test = await Test.findById(testId);
 
@@ -159,12 +145,10 @@ const submitTest = async (req, res) => {
       return res.status(404).json({ message: "Test not found" });
     }
 
-    // deadline
     if (test.dueDate && new Date() > test.dueDate) {
       return res.status(400).json({ message: "Deadline passed" });
     }
 
-    // check class
     const classData = await Class.findById(test.class);
     const isStudent = classData.students.includes(req.user._id);
 
@@ -172,7 +156,6 @@ const submitTest = async (req, res) => {
       return res.status(403).json({ message: "Not enrolled" });
     }
 
-    // check đã làm chưa
     const existed = await TestSubmission.findOne({
       test: testId,
       student: req.user._id,
@@ -182,7 +165,6 @@ const submitTest = async (req, res) => {
       return res.status(400).json({ message: "Already submitted" });
     }
 
-    // ================= AUTO GRADE =================
     let correct = 0;
 
     test.questions.forEach((q) => {
@@ -200,15 +182,12 @@ const submitTest = async (req, res) => {
 
     const submission = await TestSubmission.create({
       test: testId,
-      classId: test.class, // ✅ QUAN TRỌNG
+      classId: test.class,
       student: req.user._id,
       answers,
       score,
       totalQuestions: test.questions.length,
     });
-
-    // ================= AUTO CERTIFICATE =================
-    const { createCertificateIfEligible } = require("./certificateController");
 
     await createCertificateIfEligible({
       studentId: req.user._id,
@@ -234,17 +213,14 @@ const getTestSubmissions = async (req, res) => {
   try {
     const { testId } = req.params;
 
+    if (!isAdminOrInstructor(req.user)) {
+      return res.status(403).json({ message: "Forbidden" });
+    }
+
     const test = await Test.findById(testId);
 
     if (!test) {
       return res.status(404).json({ message: "Not found" });
-    }
-
-    if (
-      req.user.role !== "ADMIN" &&
-      !test.instructor.equals(req.user._id)
-    ) {
-      return res.status(403).json({ message: "Forbidden" });
     }
 
     const submissions = await TestSubmission.find({ test: testId })

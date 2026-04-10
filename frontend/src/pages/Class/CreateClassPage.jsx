@@ -137,7 +137,7 @@ const fetchInstructors = async () => {
         });
       }
 
-      navigate("/instructor/classes");
+      navigate("/dashboard/classes");
     } catch (err) {
       console.error(err);
 

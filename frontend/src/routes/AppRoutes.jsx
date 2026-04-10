@@ -25,6 +25,7 @@ import PaymentManagementPage from "../pages/Payment/ManagePaymentPage";
 
 import CertificatePage from "../pages/Certificate/CertificatePage";
 import CertificateManagementPage from "../pages/Certificate/CertificateManagementPage";
+import CertificateEditPage from "../pages/Certificate/CertificateEditPage";
 
 import ClassListPage from "../pages/Class/ClassListPage";
 import ClassDetailPage from "../pages/Class/ClassDetailPage";
@@ -107,7 +108,7 @@ const AppRoutes = () => {
         />
 
         <Route
-          path="checkout/:courseId"
+          path="/checkout/:courseId"
           element={
             <ProtectedRoute role="STUDENT">
               <CheckoutPage />
@@ -235,6 +236,11 @@ const AppRoutes = () => {
           path="certificates"
           element={<CertificateManagementPage />}
         />
+        <Route
+          path="certificates/edit/:id"
+          element={<CertificateEditPage />}
+        />
+
 
         {/* ===== ADMIN ONLY ===== */}
         <Route

@@ -34,37 +34,33 @@ const ManageLessonPage = () => {
   const toast = useToast();
 
   const user = JSON.parse(localStorage.getItem("user"));
-  const role = user?.role;
+  const role = user?.role?.toUpperCase();
 
   // ================= FETCH =================
   const fetchData = async () => {
-  setLoading(true);
-  try {
-    let res;
+    setLoading(true);
+    try {
+      let res;
 
-    if (classId) {
-      res = await axiosInstance.get(`/api/lessons/class/${classId}`);
-    } else {
-      res = await axiosInstance.get("/api/lessons");
+      if (classId) {
+        res = await axiosInstance.get(`/api/lessons/class/${classId}`);
+      } else {
+        res = await axiosInstance.get("/api/lessons");
+      }
+
+      const lessonsData = res.data.lessons;
+
+      setLessons(lessonsData);
+      setFilteredLessons(lessonsData);
+    } catch (err) {
+      toast({
+        title: err.response?.data?.message || "Load lessons failed",
+        status: "error",
+      });
+    } finally {
+      setLoading(false);
     }
-
-    const lessonsData = res.data.lessons;
-
-    setLessons(lessonsData);
-    setFilteredLessons(lessonsData);
-
-  } catch (err) {
-    console.error("ERROR:", err);
-    console.error("RESPONSE:", err.response);
-
-    toast({
-      title: err.response?.data?.message || "Load lessons failed",
-      status: "error",
-    });
-  } finally {
-    setLoading(false); // ✅ QUAN TRỌNG
-  }
-};
+  };
 
   useEffect(() => {
     fetchData();
@@ -125,7 +121,7 @@ const ManageLessonPage = () => {
           Manage Lessons {classId && "(Class View)"}
         </Heading>
 
-        {role === "instructor" && (
+        {(role === "INSTRUCTOR" || role === "ADMIN") && (
           <Button
             colorScheme="teal"
             onClick={() =>
@@ -170,7 +166,6 @@ const ManageLessonPage = () => {
 
                     <Td>{lesson.class?.title || "N/A"}</Td>
 
-                    {/* ✅ FIX content */}
                     <Td>
                       {lesson.contentUrl
                         ? lesson.contentUrl.slice(0, 50) + "..."
@@ -185,28 +180,30 @@ const ManageLessonPage = () => {
 
                     <Td isNumeric>
                       <HStack justify="flex-end">
-                        {role === "instructor" && (
-                          <Button
-                            size="sm"
-                            onClick={() =>
-                              navigate(
-                                `/dashboard/edit-lesson/${lesson._id}`
-                              )
-                            }
-                          >
-                            Edit
-                          </Button>
-                        )}
+                        {(role === "INSTRUCTOR" || role === "ADMIN") && (
+                          <>
+                            <Button
+                              size="sm"
+                              onClick={() =>
+                                navigate(
+                                  `/dashboard/edit-lesson/${lesson._id}`
+                                )
+                              }
+                            >
+                              Edit
+                            </Button>
 
-                        <Button
-                          size="sm"
-                          colorScheme="red"
-                          onClick={() =>
-                            handleDelete(lesson._id)
-                          }
-                        >
-                          Delete
-                        </Button>
+                            <Button
+                              size="sm"
+                              colorScheme="red"
+                              onClick={() =>
+                                handleDelete(lesson._id)
+                              }
+                            >
+                              Delete
+                            </Button>
+                          </>
+                        )}
                       </HStack>
                     </Td>
                   </Tr>

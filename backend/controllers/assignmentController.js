@@ -19,7 +19,8 @@ const createAssignment = async (req, res) => {
       return res.status(404).json({ message: "Class not found" });
     }
 
-    // ✅ Instructor phải thuộc class
+    // ✅ ADMIN: luôn được
+    // ✅ INSTRUCTOR: phải đúng class
     if (
       req.user.role === "INSTRUCTOR" &&
       !classData.instructor.equals(req.user._id)
@@ -32,7 +33,7 @@ const createAssignment = async (req, res) => {
       description,
       dueDate,
       classId,
-      instructor: req.user._id,
+      instructor: classData.instructor, // ✅ FIX: luôn gán instructor của class
     });
 
     res.status(201).json(assignment);
@@ -48,7 +49,14 @@ const getAssignments = async (req, res) => {
     let filter = {};
 
     if (req.user.role === "INSTRUCTOR") {
-      filter.instructor = req.user._id;
+      // ✅ lấy tất cả class của instructor
+      const classes = await Class.find({
+        instructor: req.user._id,
+      }).select("_id");
+
+      const classIds = classes.map((c) => c._id);
+
+      filter.classId = { $in: classIds };
     }
 
     if (classId) {
@@ -70,20 +78,19 @@ const updateAssignment = async (req, res) => {
   try {
     const { assignmentId } = req.params;
 
-    if (!mongoose.Types.ObjectId.isValid(assignmentId)) {
-      return res.status(400).json({ message: "Invalid ID" });
-    }
-
     const assignment = await Assignment.findById(assignmentId);
 
     if (!assignment) {
       return res.status(404).json({ message: "Not found" });
     }
 
-    // ✅ CHECK QUYỀN
+    const classData = await Class.findById(assignment.classId);
+
+    // ✅ ADMIN: ok
+    // ✅ INSTRUCTOR: phải là chủ class
     if (
       req.user.role !== "ADMIN" &&
-      assignment.instructor.toString() !== req.user._id.toString()
+      !classData.instructor.equals(req.user._id)
     ) {
       return res.status(403).json({ message: "Forbidden" });
     }
@@ -103,7 +110,6 @@ const updateAssignment = async (req, res) => {
 
     res.json(updated);
   } catch (error) {
-    console.error("UPDATE ERROR:", error);
     res.status(500).json({ message: error.message });
   }
 };
@@ -113,20 +119,17 @@ const deleteAssignment = async (req, res) => {
   try {
     const { assignmentId } = req.params;
 
-    if (!mongoose.Types.ObjectId.isValid(assignmentId)) {
-      return res.status(400).json({ message: "Invalid ID" });
-    }
-
     const assignment = await Assignment.findById(assignmentId);
 
     if (!assignment) {
       return res.status(404).json({ message: "Not found" });
     }
 
-    // ✅ ADMIN xóa tất cả | instructor chỉ xóa của mình
+    const classData = await Class.findById(assignment.classId);
+
     if (
       req.user.role !== "ADMIN" &&
-      assignment.instructor.toString() !== req.user._id.toString()
+      !classData.instructor.equals(req.user._id)
     ) {
       return res.status(403).json({ message: "Forbidden" });
     }
@@ -136,7 +139,6 @@ const deleteAssignment = async (req, res) => {
 
     res.json({ message: "Deleted" });
   } catch (error) {
-    console.error("DELETE ERROR:", error);
     res.status(500).json({ message: error.message });
   }
 };

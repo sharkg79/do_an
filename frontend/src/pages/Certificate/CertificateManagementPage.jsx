@@ -10,6 +10,8 @@ import {
 } from "@chakra-ui/react";
 
 import { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
+
 import {
   getAllCertificatesAPI,
   deleteCertificateAPI,
@@ -23,6 +25,7 @@ const ManageCertificatePage = () => {
 
   const { user, loading: authLoading } = useAuth();
   const toast = useToast();
+  const navigate = useNavigate();
 
   // ================= FETCH =================
   const fetchCertificates = async () => {
@@ -50,8 +53,7 @@ const ManageCertificatePage = () => {
     try {
       await deleteCertificateAPI(id);
 
-      const updated = certificates.filter((c) => c._id !== id);
-      setCertificates(updated);
+      setCertificates((prev) => prev.filter((c) => c._id !== id));
 
       toast({
         title: "Deleted successfully",
@@ -96,16 +98,16 @@ const ManageCertificatePage = () => {
             >
               {/* STUDENT */}
               <Text fontWeight="bold" mb={2}>
-                {cert.student?.name}
+                {cert.student?.name || "Unknown"}
               </Text>
 
               <Text fontSize="sm" color="gray.500" mb={2}>
-                {cert.student?.email}
+                {cert.student?.email || "No email"}
               </Text>
 
               {/* COURSE */}
               <Text fontSize="md" mb={2}>
-                Course: {cert.course?.title}
+                Course: {cert.course?.title || "N/A"}
               </Text>
 
               {/* GRADE */}
@@ -116,19 +118,37 @@ const ManageCertificatePage = () => {
               {/* DATE */}
               <Text fontSize="sm" color="gray.500" mb={4}>
                 Issued:{" "}
-                {new Date(cert.issuedAt).toLocaleDateString()}
+                {cert.issuedAt
+                  ? new Date(cert.issuedAt).toLocaleDateString()
+                  : "N/A"}
               </Text>
 
               {/* ACTION */}
               <Flex gap={2}>
-                <Button
-                  size="sm"
-                  colorScheme="red"
-                  onClick={() => handleDelete(cert._id)}
-                >
-                  Delete
-                </Button>
+                {/* ADMIN ONLY */}
+                {user?.role === "ADMIN" && (
+                  <>
+                    <Button
+                      size="sm"
+                      colorScheme="yellow"
+                      onClick={() =>
+                        navigate(`/dashboard/certificates/edit/${cert._id}`)
+                      }
+                    >
+                      Edit
+                    </Button>
 
+                    <Button
+                      size="sm"
+                      colorScheme="red"
+                      onClick={() => handleDelete(cert._id)}
+                    >
+                      Delete
+                    </Button>
+                  </>
+                )}
+
+                {/* VIEW FILE (ai cũng xem được) */}
                 {cert.certificateUrl && (
                   <Button
                     size="sm"
@@ -137,7 +157,7 @@ const ManageCertificatePage = () => {
                       window.open(cert.certificateUrl, "_blank")
                     }
                   >
-                    View
+                    View File
                   </Button>
                 )}
               </Flex>

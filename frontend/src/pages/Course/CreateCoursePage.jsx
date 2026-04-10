@@ -93,7 +93,7 @@ const CreateCoursePage = () => {
         });
       }
 
-      navigate("/instructor/courses");
+      navigate("/dashboard/courses");
     } catch (err) {
       console.error(err);
 
