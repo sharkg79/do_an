@@ -74,7 +74,7 @@ const getTests = async (req, res) => {
     }
 
     const tests = await Test.find(query)
-      .populate("classId", "title")
+      .populate("class", "title")
       .populate("instructor", "name email");
 
     res.json(tests);

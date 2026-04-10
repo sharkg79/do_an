@@ -34,8 +34,8 @@ const getTestSubmissions = async (req, res) => {
     }
 
     const submissions = await TestSubmission.find(filter)
-      .populate("student", "name email")
-      .populate("test", "title instructor")
+      .populate("student")
+      .populate("test")
       .sort({ createdAt: -1 });
 
     res.json(submissions);

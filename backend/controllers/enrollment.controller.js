@@ -27,7 +27,9 @@ const createPayment = async (req, res) => {
       isPaid: false
     });
 
-    res.json(enrollment);
+    res.json({
+  enrollmentId: enrollment._id
+});
 
   } catch (error) {
     res.status(500).json({ message: error.message });

@@ -39,38 +39,27 @@ const CourseDetailPage = () => {
   const fetchData = async () => {
   try {
     setLoading(true);
-    setEnrolledClass(null); // reset trước khi fetch
 
-    const res = await axios.get(`http://localhost:5000/api/courses/${id}`, {
-      headers: { Authorization: `Bearer ${token}` },
-    });
+    const res = await axios.get(
+      `http://localhost:5000/api/courses/${id}`,
+      {
+        headers: { Authorization: `Bearer ${token}` },
+      }
+    );
 
     const courseData = res.data.course;
-    setCourse(courseData);
-
     const classesData = res.data.classes || [];
+    const enrolled = res.data.enrolledClass;
 
-    let foundEnrolled = null;
+    setCourse(courseData);
+    setClasses(classesData);
 
-    const classesWithEnroll = classesData.map((cls) => {
-      const isEnrolled =
-        cls.students?.some((s) => s._id === currentUser._id) || false;
-
-      if (isEnrolled) {
-        foundEnrolled = cls;
-      }
-
-      return {
-        ...cls,
-        isEnrolled,
-      };
-    });
-
-    setClasses(classesWithEnroll);
-    setEnrolledClass(foundEnrolled);
-
-    const lessonData = await getLessonsByCourse(id);
-    setLessons(lessonData);
+    // ✅ set enrolled class đúng
+    if (enrolled) {
+      setEnrolledClass(enrolled);
+    } else {
+      setEnrolledClass(null);
+    }
 
   } catch (err) {
     console.error(err);
@@ -144,7 +133,7 @@ const CourseDetailPage = () => {
                   colorScheme="green"
                   size="lg"
                   onClick={() =>
-                    navigate(`/classes/${enrolledClass._id}/lessons`)
+                    navigate(`/classes/${enrolledClass}/lessons`)
                   }
                 >
                   Go to Class

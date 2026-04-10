@@ -55,31 +55,35 @@ const PaymentPage = () => {
   };
 
   // ================= PAYMENT =================
-  const handlePayment = async () => {
-    try {
-      setProcessing(true);
+ const handlePayment = async () => {
+  try {
+    setProcessing(true);
 
-      const res = await createPaymentAPI({
-        classId: classId,
-      });
+    // 1. tạo enrollment
+    const res = await createPaymentAPI({
+      classId: classId,
+      courseId: course._id,
+    });
 
-      // redirect sang payment gateway
-      window.location.href = res.data.url;
-navigate(-1);
-    } catch (err) {
-      console.error(err);
-      alert("Payment failed");
-    } finally {
-      setProcessing(false);
-    }
-  };
+    const enrollmentId = res.data.enrollmentId;
 
-  if (loading)
-    return (
-      <Center h="80vh">
-        <Spinner size="xl" />
-      </Center>
-    );
+    // 2. confirm payment (fake)
+    await confirmPaymentAPI({
+      enrollmentId,
+    });
+
+    alert("Thanh toán thành công!");
+
+    // 3. quay về course detail
+    navigate(`/courses/${course._id}`);
+
+  } catch (err) {
+    console.error(err);
+    alert("Payment failed");
+  } finally {
+    setProcessing(false);
+  }
+};
 
   return (
     <Container maxW="5xl" py={10}>

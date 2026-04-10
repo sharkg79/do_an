@@ -1,5 +1,6 @@
 const Course = require("../models/Course");
 const Class = require("../models/Class");
+const Enrollment = require("../models/Enrollment");
 
 // Create course
 async function createCourse(req, res) {
@@ -49,13 +50,34 @@ async function getCourseById(req, res) {
       "instructor",
       "name email role"
     );
-    if (!course) return res.status(404).json({ error: "Course not found" });
+
+    if (!course) {
+      return res.status(404).json({ error: "Course not found" });
+    }
 
     const classes = await Class.find({ course: course._id }).populate(
       "instructor",
       "name email"
     );
-    res.json({ course, classes });
+
+    // ✅ CHECK ENROLLMENT ĐÚNG
+    const enrollment = await Enrollment.findOne({
+  student: req.user._id,
+  course: course._id,
+  isPaid: true,
+}).lean();
+
+    let enrolledClass = null;
+
+    if (enrollment) {
+      enrolledClass = enrollment.class; // trả về classId
+    }
+
+    res.json({
+      course,
+      classes,
+      enrolledClass,
+    });
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: "Server error" });

@@ -23,7 +23,7 @@ class: {
 
   paymentMethod: {
     type: String,
-    enum: ["MOMO", "VNPAY", "STRIPE", "FREE"]
+    enum: ["MOMO", "VNPAY", "STRIPE"]
   },
 
   paymentId: String,
