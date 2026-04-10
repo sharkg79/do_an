@@ -17,9 +17,8 @@ import CourseDetailPage from "../pages/Course/CourseDetailPage";
 import StudentDashboardPage from "../pages/Report/StudentDashboardPage";
 import InstructorOverviewPage from "../pages/Report/InstructorOverviewPage";
 import AdminOverviewPage from "../pages/Report/AdminOverviewPage";
-import CourseProgressPage from "../pages/Report/CourseProgressPage";
 
-import CheckoutPage from "../pages/Payment/CheckoutPage";
+import PaymentPage from "../pages/Payment/PaymentPage";
 import MyCoursesPage from "../pages/Payment/MyCoursesPage";
 import PaymentManagementPage from "../pages/Payment/ManagePaymentPage";
 
@@ -43,6 +42,7 @@ import LessonDetail from "../pages/Lesson/LessonDetail";
 import ManageUserPage from "../pages/User/ManageUserPage";
 import CreateUserPage from "../pages/User/CreateUserPage";
 import UserDetail from "../pages/User/UserDetail";
+import ProfilePage from "../pages/User/ProfilePage";
 
 // ===== ASSIGNMENT =====
 import ManageAssignmentPage from "../pages/Assignment/ManageAssignmentPage";
@@ -58,20 +58,16 @@ import ManageTestPage from "../pages/Test/ManageTestPage";
 import CreateTestPage from "../pages/Test/CreateTestPage";
 import TestDetail from "../pages/Test/TestDetail";
 
-
 // ===== TEST SUBMISSION =====
 import ManageTestSubmissionPage from "../pages/TestSubmisstion/ManageTestSubmissionPage";
-import TestListPage from "../pages/TestSubmisstion/TestListPage";
-import TestDoingPage from "../pages/TestSubmisstion/TestDoingPage";
-import TestResultPage from "../pages/TestSubmisstion/TestResultPage";
 
 const AppRoutes = () => {
   return (
     <Routes>
       {/* ================= AUTH ================= */}
-      <Route element={<AuthLayout />}>
-        <Route path="/login" element={<Login />} />
-        <Route path="/register" element={<Register />} />
+      <Route path="/" element={<AuthLayout />}>
+        <Route path="login" element={<Login />} />
+        <Route path="register" element={<Register />} />
       </Route>
 
       {/* ================= MAIN USER ================= */}
@@ -79,6 +75,9 @@ const AppRoutes = () => {
         <Route index element={<Home />} />
 
         <Route path="courses/:id" element={<CourseDetailPage />} />
+
+        {/* PROFILE (nếu bạn vẫn dùng ngoài dashboard) */}
+        <Route path="profile" element={<ProfilePage />} />
 
         <Route
           path="student-dashboard"
@@ -107,14 +106,8 @@ const AppRoutes = () => {
           }
         />
 
-        <Route
-          path="/checkout/:courseId"
-          element={
-            <ProtectedRoute role="STUDENT">
-              <CheckoutPage />
-            </ProtectedRoute>
-          }
-        />
+        {/* PAYMENT */}
+        <Route path="payment/:classId" element={<PaymentPage />} />
 
         <Route
           path="my-courses"
@@ -133,29 +126,51 @@ const AppRoutes = () => {
             </ProtectedRoute>
           }
         />
-        {/* LESSONS */}
-        <Route path="/classes/:classId/lessons" element={<LessonList />} />
-        <Route path="/lessons/:lessonId" element={<LessonDetail />} />
-        {/* ===== ASSIGNMENT (STUDENT) ===== */}
-        <Route path="/classes/:classId/assignments" element={<AssignmentList />} />
-        <Route path="/assignments/:assignmentId" element={<AssignmentDetail />} />
 
-        {/* ===== TEST (STUDENT) ===== */}
-       <Route path="/tests/:testId" element={<TestDetail />} />
-       {/* MEMBERS */}
-       <Route path="/classes/:classId/users" element={<UserDetail />} />
+        {/* LESSON */}
+        <Route path="classes/:classId/lessons" element={<LessonList />} />
+        <Route path="lessons/:lessonId" element={<LessonDetail />} />
+
+        {/* ASSIGNMENT */}
+        <Route path="classes/:classId/assignments" element={<AssignmentList />} />
+        <Route path="assignments/:assignmentId" element={<AssignmentDetail />} />
+
+        {/* TEST */}
+        <Route path="tests/:testId" element={<TestDetail />} />
+
+        {/* USERS */}
+        <Route path="classes/:classId/users" element={<UserDetail />} />
       </Route>
 
       {/* ================= DASHBOARD ================= */}
       <Route
         path="/dashboard"
         element={
-          <ProtectedRoute role={["INSTRUCTOR", "ADMIN"]}>
+          <ProtectedRoute role={["STUDENT", "INSTRUCTOR", "ADMIN"]}>
             <DashboardLayout />
           </ProtectedRoute>
         }
       >
-        {/* ===== OVERVIEW ===== */}
+        {/* PROFILE */}
+        <Route
+          path="profile"
+          element={
+            <ProtectedRoute role={["STUDENT", "INSTRUCTOR", "ADMIN"]}>
+              <ProfilePage />
+            </ProtectedRoute>
+          }
+        />
+
+        {/* DASHBOARD */}
+        <Route
+          path="admin-overview"
+          element={
+            <ProtectedRoute role="ADMIN">
+              <AdminOverviewPage />
+            </ProtectedRoute>
+          }
+        />
+
         <Route
           path="instructor-overview"
           element={
@@ -166,83 +181,53 @@ const AppRoutes = () => {
         />
 
         <Route
-          path="admin-overview"
+          path="student-dashboard"
           element={
-            <ProtectedRoute role="ADMIN">
-              <AdminOverviewPage />
+            <ProtectedRoute role="STUDENT">
+              <StudentDashboardPage />
             </ProtectedRoute>
           }
         />
 
-        {/* ===== COURSE ===== */}
+        {/* COURSE */}
         <Route path="courses" element={<ManageCoursePage />} />
         <Route path="create-course" element={<CreateCoursePage />} />
         <Route path="create-course/:id" element={<CreateCoursePage />} />
 
-        {/* ===== CLASS ===== */}
+        {/* CLASS */}
         <Route path="classes" element={<ManageClassPage />} />
-        <Route
-          path="courses/:courseId/classes"
-          element={<ManageClassPage />}
-        />
+        <Route path="courses/:courseId/classes" element={<ManageClassPage />} />
         <Route path="create-class" element={<CreateClassPage />} />
         <Route path="create-class/:id" element={<CreateClassPage />} />
 
-        {/* ===== LESSON ===== */}
+        {/* LESSON */}
         <Route path="lessons" element={<ManageLessonPage />} />
-        <Route
-          path="classes/:classId/lessons"
-          element={<ManageLessonPage />}
-        />
+        <Route path="classes/:classId/lessons" element={<ManageLessonPage />} />
         <Route path="create-lesson/:classId" element={<CreateLessonPage />} />
-        {/* ===== ASSIGNMENT ===== */}
+
+        {/* ASSIGNMENT */}
         <Route path="assignments" element={<ManageAssignmentPage />} />
-        <Route
-          path="classes/:classId/assignments"
-          element={<ManageAssignmentPage />}
-        />
-        <Route
-          path="create-assignment/:classId"
-          element={<CreateAssignmentPage />}
-        />
+        <Route path="classes/:classId/assignments" element={<ManageAssignmentPage />} />
+        <Route path="create-assignment/:classId" element={<CreateAssignmentPage />} />
 
-        {/* ===== SUBMISSION ===== */}
+        {/* SUBMISSION */}
         <Route path="submissions" element={<ManageSubmissionPage />} />
-        <Route
-          path="assignments/:assignmentId/submissions"
-          element={<ManageSubmissionPage />}
-        />
+        <Route path="assignments/:assignmentId/submissions" element={<ManageSubmissionPage />} />
 
-        {/* ===== TEST ===== */}
+        {/* TEST */}
         <Route path="tests" element={<ManageTestPage />} />
-        <Route
-          path="classes/:classId/tests"
-          element={<ManageTestPage />}
-        />
+        <Route path="classes/:classId/tests" element={<ManageTestPage />} />
         <Route path="create-test/:classId" element={<CreateTestPage />} />
 
-        {/* ===== TEST SUBMISSION ===== */}
-        <Route
-          path="test-submissions"
-          element={<ManageTestSubmissionPage />}
-        />
-        <Route
-          path="tests/:testId/submissions"
-          element={<ManageTestSubmissionPage />}
-        />
+        {/* TEST SUBMISSION */}
+        <Route path="test-submissions" element={<ManageTestSubmissionPage />} />
+        <Route path="tests/:testId/submissions" element={<ManageTestSubmissionPage />} />
 
-        {/* ===== CERTIFICATE ===== */}
-        <Route
-          path="certificates"
-          element={<CertificateManagementPage />}
-        />
-        <Route
-          path="certificates/edit/:id"
-          element={<CertificateEditPage />}
-        />
+        {/* CERTIFICATE */}
+        <Route path="certificates" element={<CertificateManagementPage />} />
+        <Route path="certificates/edit/:id" element={<CertificateEditPage />} />
 
-
-        {/* ===== ADMIN ONLY ===== */}
+        {/* ADMIN */}
         <Route
           path="users"
           element={
@@ -251,6 +236,7 @@ const AppRoutes = () => {
             </ProtectedRoute>
           }
         />
+
         <Route
           path="create-user"
           element={
@@ -259,6 +245,7 @@ const AppRoutes = () => {
             </ProtectedRoute>
           }
         />
+
         <Route
           path="create-user/:id"
           element={
@@ -278,7 +265,7 @@ const AppRoutes = () => {
         />
       </Route>
 
-      {/* ================= FALLBACK ================= */}
+      {/* ================= 404 ================= */}
       <Route path="*" element={<div>404 NOT FOUND</div>} />
     </Routes>
   );

@@ -1,18 +1,21 @@
-// controllers/classController.js
 const mongoose = require("mongoose");
 const Class = require("../models/Class");
 const Course = require("../models/Course");
 
-// CREATE CLASS
+
+// ================= CREATE CLASS =================
 const createClass = async (req, res) => {
   try {
     const { course, title, startDate, endDate, instructor } = req.body;
+
     let instructorId = req.user._id;
 
-if (req.user.role === "ADMIN" && instructor) {
-  instructorId = instructor;
-}
+    // ✅ ADMIN có thể chọn instructor
+    if (req.user.role === "ADMIN" && instructor) {
+      instructorId = instructor;
+    }
 
+    // validate course
     if (!mongoose.Types.ObjectId.isValid(course)) {
       return res.status(400).json({ message: "Invalid course ID" });
     }
@@ -23,10 +26,10 @@ if (req.user.role === "ADMIN" && instructor) {
       return res.status(404).json({ message: "Course not found" });
     }
 
-    // Instructor chỉ được tạo class cho course của mình
+    // ✅ INSTRUCTOR chỉ được tạo class cho course của mình
     if (
       req.user.role === "INSTRUCTOR" &&
-      courseExist.instructor.toString() !== instructor.toString()
+      courseExist.instructor.toString() !== req.user._id.toString()
     ) {
       return res.status(403).json({ message: "Not your course" });
     }
@@ -34,46 +37,55 @@ if (req.user.role === "ADMIN" && instructor) {
     const newClass = new Class({
       title,
       course,
-      instructor,
+      instructor: instructorId, // ✅ FIX
       startDate,
-      endDate
+      endDate,
+      students: [] // đảm bảo có field
     });
 
     await newClass.save();
 
-    res.status(201).json(newClass);
+    const populated = await Class.findById(newClass._id)
+      .populate("course", "title")
+      .populate("instructor", "name email");
+
+    res.status(201).json(populated);
 
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
 };
 
-// GET ALL CLASSES
+
+// ================= GET ALL CLASSES =================
 const getAllClasses = async (req, res) => {
   try {
-    let filter = {};
+    let query = {};
 
-    if (req.user.role === "INSTRUCTOR") {
-      filter.instructor = req.user._id;
-    }
-
+    // ✅ STUDENT → chỉ lấy lớp đã enroll
     if (req.user.role === "STUDENT") {
-      filter.students = req.user._id;
+      query.students = req.user._id;
     }
 
-    const classes = await Class.find(filter)
+    // ✅ INSTRUCTOR → lớp mình dạy
+    if (req.user.role === "INSTRUCTOR") {
+      query.instructor = req.user._id;
+    }
+
+    const classes = await Class.find(query)
       .populate("course", "title")
       .populate("instructor", "name email")
-      .populate("students", "name");
+      .populate("students", "name email"); // optional
 
     res.json(classes);
 
-  } catch (error) {
-    res.status(500).json({ message: error.message });
+  } catch (err) {
+    res.status(500).json({ message: err.message });
   }
 };
 
-// GET CLASS BY ID
+
+// ================= GET CLASS BY ID =================
 const getClassById = async (req, res) => {
   try {
     const { id } = req.params;
@@ -91,16 +103,15 @@ const getClassById = async (req, res) => {
       return res.status(404).json({ message: "Class not found" });
     }
 
-    res.json({
-  class: classObj
-});
+    res.json(classObj);
 
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
 };
 
-// UPDATE CLASS
+
+// ================= UPDATE CLASS =================
 const updateClass = async (req, res) => {
   try {
     const { id } = req.params;
@@ -115,7 +126,7 @@ const updateClass = async (req, res) => {
       return res.status(404).json({ message: "Class not found" });
     }
 
-    // Check quyền
+    // ✅ check quyền instructor
     if (
       req.user.role === "INSTRUCTOR" &&
       classObj.instructor.toString() !== req.user._id.toString()
@@ -125,7 +136,9 @@ const updateClass = async (req, res) => {
 
     const updated = await Class.findByIdAndUpdate(id, req.body, {
       new: true
-    });
+    })
+      .populate("course", "title")
+      .populate("instructor", "name email");
 
     res.json(updated);
 
@@ -134,7 +147,8 @@ const updateClass = async (req, res) => {
   }
 };
 
-// DELETE CLASS
+
+// ================= DELETE CLASS =================
 const deleteClass = async (req, res) => {
   try {
     const { id } = req.params;
@@ -165,13 +179,13 @@ const deleteClass = async (req, res) => {
   }
 };
 
-// ENROLL CLASS
+
+// ================= ENROLL CLASS =================
 const enrollClass = async (req, res) => {
   try {
     const classId = req.params.id;
     const studentId = req.user._id;
 
-    // Role check
     if (req.user.role !== "STUDENT") {
       return res.status(403).json({ message: "Only students can enroll" });
     }
@@ -186,7 +200,6 @@ const enrollClass = async (req, res) => {
       return res.status(404).json({ message: "Class not found" });
     }
 
-    // Check enrolled (FIX BUG)
     const isEnrolled = classObj.students.some(
       (id) => id.toString() === studentId.toString()
     );
@@ -198,9 +211,14 @@ const enrollClass = async (req, res) => {
     classObj.students.push(studentId);
     await classObj.save();
 
+    // ✅ trả về data đã populate (dashboard dùng được luôn)
+    const populatedClass = await Class.findById(classId)
+      .populate("course", "title")
+      .populate("instructor", "name email");
+
     res.json({
       message: "Enroll success",
-      class: classObj
+      class: populatedClass
     });
 
   } catch (error) {
@@ -208,8 +226,8 @@ const enrollClass = async (req, res) => {
   }
 };
 
-// GET CLASSES BY COURSE
-// controllers/classController.js
+
+// ================= GET CLASSES BY COURSE =================
 const getClassesByCourse = async (req, res) => {
   try {
     const { courseId } = req.params;
@@ -219,14 +237,17 @@ const getClassesByCourse = async (req, res) => {
     }
 
     const classes = await Class.find({ course: courseId })
+      .populate("course", "title")
       .populate("instructor", "name email")
-      .populate("students", "_id"); // lấy _id của tất cả students
+      .populate("students", "_id");
 
     res.json(classes);
+
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
 };
+
 
 module.exports = {
   createClass,

@@ -50,20 +50,39 @@ const getTests = async (req, res) => {
   try {
     const { classId } = req.query;
 
-    let filter = {};
+    let query = {};
 
+    // ✅ nếu có filter class
     if (classId) {
-      filter.class = classId;
+      query.classId = classId;
     }
 
-    const tests = await Test.find(filter)
-      .populate("instructor", "name email")
-      .populate("class", "name")
-      .sort({ createdAt: -1 });
+    // ✅ STUDENT: chỉ lấy test của lớp mình học
+    if (req.user.role === "STUDENT") {
+      const classes = await Class.find({
+        students: req.user._id,
+      }).select("_id");
+
+      const classIds = classes.map((c) => c._id);
+
+      query.classId = { $in: classIds };
+    }
+
+    // ✅ INSTRUCTOR: chỉ lấy test mình tạo
+    if (req.user.role === "INSTRUCTOR") {
+      query.instructor = req.user._id;
+    }
+
+    const tests = await Test.find(query)
+      .populate("classId", "title")
+      .populate("instructor", "name email");
 
     res.json(tests);
-  } catch (error) {
-    res.status(500).json({ message: error.message });
+  } catch (err) {
+    res.status(500).json({
+      message: "Error fetching tests",
+      error: err.message,
+    });
   }
 };
 

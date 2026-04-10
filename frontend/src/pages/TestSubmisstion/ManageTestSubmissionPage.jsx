@@ -90,24 +90,6 @@ const ManageTestSubmissionPage = () => {
     }
   };
 
-  // ================= GRADE =================
-  const handleGrade = async (submission) => {
-    try {
-      const updated = await gradeTestSubmissionAPI(submission._id);
-
-      const newList = submissions.map((s) =>
-        s._id === submission._id ? updated.submission : s
-      );
-
-      setSubmissions(newList);
-      setFilteredSubmissions(newList);
-
-      toast({ title: "Auto graded", status: "success" });
-    } catch (err) {
-      toast({ title: err.message || "Grade failed", status: "error" });
-    }
-  };
-
   // ================= OPEN MODAL =================
   const handleViewDetail = (submission) => {
     setSelectedSubmission(submission);

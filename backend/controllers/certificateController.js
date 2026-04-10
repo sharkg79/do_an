@@ -63,10 +63,10 @@ const createCertificateIfEligible = async ({
 const getMyCertificates = async (req, res) => {
   try {
     const certificates = await Certificate.find({
-      student: req.user._id,
-    })
-      .populate("course", "title")
-      .sort({ createdAt: -1 });
+  student: req.user._id,
+})
+  .populate("classId", "title")
+  .populate("course", "title");
 
     res.json(certificates);
   } catch (error) {
@@ -100,10 +100,49 @@ const deleteCertificate = async (req, res) => {
     res.status(500).json({ message: error.message });
   }
 };
+// ================= UPDATE =================
+const updateCertificate = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { grade, certificateUrl } = req.body;
 
+    const cert = await Certificate.findById(id);
+
+    if (!cert) {
+      return res.status(404).json({ message: "Certificate not found" });
+    }
+
+    cert.grade = grade ?? cert.grade;
+    cert.certificateUrl = certificateUrl ?? cert.certificateUrl;
+
+    await cert.save();
+
+    res.json(cert);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+// ================= GET DETAIL =================
+const getCertificateById = async (req, res) => {
+  try {
+    const cert = await Certificate.findById(req.params.id)
+      .populate("student", "name email")
+      .populate("course", "title description");
+
+    if (!cert) {
+      return res.status(404).json({ message: "Not found" });
+    }
+
+    res.json(cert);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
 module.exports = {
   createCertificateIfEligible, // ⚠️ internal
   getMyCertificates,
   getAllCertificates,
   deleteCertificate,
+  updateCertificate,
+  getCertificateById,
 };

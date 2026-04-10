@@ -46,31 +46,31 @@ const createAssignment = async (req, res) => {
 const getAssignments = async (req, res) => {
   try {
     const { classId } = req.query;
-    let filter = {};
 
-    if (req.user.role === "INSTRUCTOR") {
-      // ✅ lấy tất cả class của instructor
+    let query = {};
+
+    if (classId) {
+      query.classId = classId;
+    }
+
+    // ✅ STUDENT: chỉ lấy assignment của class mình đã enroll
+    if (req.user.role === "STUDENT") {
       const classes = await Class.find({
-        instructor: req.user._id,
+        students: req.user._id,
       }).select("_id");
 
       const classIds = classes.map((c) => c._id);
 
-      filter.classId = { $in: classIds };
+      query.classId = { $in: classIds };
     }
 
-    if (classId) {
-      filter.classId = classId;
-    }
-
-    const assignments = await Assignment.find(filter)
-      .populate("instructor", "name email")
-      .populate("classId", "name")
-      .sort({ createdAt: -1 });
+    const assignments = await Assignment.find(query)
+      .populate("classId", "title")
+      .populate("instructor", "name email");
 
     res.json(assignments);
-  } catch (error) {
-    res.status(500).json({ message: error.message });
+  } catch (err) {
+    res.status(500).json({ message: err.message });
   }
 };
 // ================= UPDATE =================

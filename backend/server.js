@@ -16,6 +16,7 @@ const testRoutes = require("./routes/tests");
 const testSubmissionRoutes = require("./routes/testSubmission");
 const certificateRoutes = require("./routes/certificates");
 const userRoutes = require("./routes/users");
+const enrollmentRoutes = require("./routes/enrollment.routes");
 
 app.use(express.json());
 app.use(cors());
@@ -32,6 +33,7 @@ app.use("/api/tests", testRoutes);
 app.use("/api/test-submissions", testSubmissionRoutes);
 app.use("/api/certificates", certificateRoutes);
 app.use("/api/users", userRoutes);
+app.use("/api/enrollments", enrollmentRoutes);
 
 // connect database
 connectDB();

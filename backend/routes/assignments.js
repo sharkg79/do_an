@@ -24,7 +24,7 @@ router.post("/", auth, role(["INSTRUCTOR", "ADMIN"]), createAssignment);
 router.get(
   "/",
   auth,
-  role(["ADMIN", "INSTRUCTOR"]), // ✅ chặn STUDENT từ đầu
+  role(["ADMIN", "INSTRUCTOR", "STUDENT"]), // ✅ chặn STUDENT từ đầu
   getAssignments
 );
 
