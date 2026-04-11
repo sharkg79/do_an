@@ -113,6 +113,11 @@ const getUserById = async (req, res) => {
   try {
     const { userId } = req.params;
 
+    // 🔥 check quyền
+    if (req.user.role !== "ADMIN" && req.user._id.toString() !== userId) {
+      return res.status(403).json({ message: "Permission denied" });
+    }
+
     const user = await User.findById(userId).select("name email role");
 
     if (!user) {
@@ -128,27 +133,17 @@ const getUserById = async (req, res) => {
 // ================= UPDATE USER =================
 const updateUser = async (req, res) => {
   try {
-    const { userId } = req.params;
-    const { name, email, password, role } = req.body;
+    const userId = req.user._id; // 🔥 lấy từ token
 
-    // kiểm tra ObjectId hợp lệ
-    if (!mongoose.Types.ObjectId.isValid(userId)) {
-      return res.status(400).json({ message: "Invalid user ID" });
-    }
+    const { name, email, password } = req.body;
 
     const user = await User.findById(userId);
 
-    if (!user) {
-      return res.status(404).json({ message: "User not found" });
-    }
-
-    // update từng field nếu có gửi lên
     if (name) user.name = name;
 
     if (email) {
-      // check email trùng (trừ chính nó)
       const existingUser = await User.findOne({ email });
-      if (existingUser && existingUser._id.toString() !== userId) {
+      if (existingUser && existingUser._id.toString() !== userId.toString()) {
         return res.status(400).json({ message: "Email already exists" });
       }
       user.email = email;
@@ -161,10 +156,7 @@ const updateUser = async (req, res) => {
 
     await user.save();
 
-    res.json({
-      message: "User updated successfully",
-      user
-    });
+    res.json({ user });
 
   } catch (error) {
     res.status(500).json({ message: error.message });

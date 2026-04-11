@@ -16,13 +16,17 @@ const {
 // 👑 ADMIN ONLY
 router.post("/", auth, role(["ADMIN"]), createUser);
 // GET ALL USERS
+router.get("/me", auth, (req, res) => {
+  res.json({ user: req.user });
 router.get("/", auth, role(["ADMIN"]), getAllUsers);
-router.get("/:userId", auth, role(["ADMIN"]), getUserById);
+router.get("/:userId", auth,getUserById);
+
+});
 // DELETE USER
 router.delete("/:userId", auth, role(["ADMIN"]), deleteUser);
 
 // UPDATE ROLE
-router.put("/:userId/role", auth, role(["ADMIN"]), updateUserRole);
+router.put("/:userId/role", auth, updateUserRole);
 // UPDATE USER
 router.put("/:userId", auth, role(["ADMIN"]), updateUser);
 

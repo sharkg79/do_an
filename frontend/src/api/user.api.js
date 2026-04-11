@@ -31,11 +31,11 @@ export const createUserAPI = async (data) => {
   return res.data;
 };
 // Cập nhật user
-export const updateUserAPI = async (userId, data) => {
-  const res = await axiosInstance.put(`/api/users/${userId}`, data);
-  return res.data;
-};
+export const updateMeAPI = (data) =>
+  axiosInstance.put("/api/users/me", data);
 export const getUsersByClassAPI = async (classId) => {
   const res = await axiosInstance.get(`/api/classes/${classId}/users`);
   return res.data;
 };
+export const getMeAPI = () =>
+  axiosInstance.get("/api/users/me");

@@ -13,7 +13,7 @@ import {
 } from "@chakra-ui/react";
 
 import { useEffect, useState } from "react";
-import { getUserByIdAPI, updateUserAPI } from "../../api/user.api";
+import { updateMeAPI,getMeAPI } from "../../api/user.api";
 
 const ProfilePage = () => {
   const toast = useToast();
@@ -32,26 +32,23 @@ const ProfilePage = () => {
 
   // ================= LOAD USER =================
   const fetchUser = async () => {
-    try {
-      const res = await getUserByIdAPI(userId);
-      const data = res.user;
+  try {
+    const res = await getMeAPI();
+    const data = res.data.user;
 
-      setUser(data);
-      setForm({
-        name: data.name,
-        email: data.email,
-        password: ""
-      });
+    setUser(data);
+    setForm({
+      name: data.name,
+      email: data.email,
+      password: ""
+    });
 
-    } catch (err) {
-      toast({
-        title: "Error loading profile",
-        status: "error"
-      });
-    } finally {
+  } catch (err) {
+    console.error(err);
+  } finally {
       setLoading(false);
     }
-  };
+};
 
   useEffect(() => {
     fetchUser();
@@ -78,7 +75,7 @@ const ProfilePage = () => {
         payload.password = form.password;
       }
 
-      await updateUserAPI(userId, payload);
+      await updateMeAPI(payload);
 
       toast({
         title: "Profile updated successfully",
@@ -140,7 +137,7 @@ const ProfilePage = () => {
 
         <Box>
           <Text fontWeight="bold">Role:</Text>
-          <Text color="blue.500">{user.role}</Text>
+          <Text color="blue.500">{user?.role || "Unknown"}</Text>
         </Box>
 
         <Button colorScheme="blue" onClick={handleUpdate}>
