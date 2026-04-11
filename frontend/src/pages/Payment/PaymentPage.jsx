@@ -10,6 +10,7 @@ import {
   Spinner,
   Center,
   Badge,
+  Select,
 } from "@chakra-ui/react";
 
 import { useParams, useNavigate } from "react-router-dom";
@@ -31,6 +32,7 @@ const PaymentPage = () => {
   const [course, setCourse] = useState(null);
   const [loading, setLoading] = useState(true);
   const [processing, setProcessing] = useState(false);
+  const [paymentMethod, setPaymentMethod] = useState("STRIPE");
 
   useEffect(() => {
     fetchData();
@@ -45,99 +47,118 @@ const PaymentPage = () => {
         }
       );
 
-      setClassData(res.data.class);
-      setCourse(res.data.class.course);
+      console.log("API:", res.data);
+
+      // ✅ FIX CHÍNH Ở ĐÂY
+      setClassData(res.data);
+      setCourse(res.data.course);
+
     } catch (err) {
-      console.error(err);
+      console.error(err.response?.data || err.message);
+      alert("Không load được dữ liệu lớp");
     } finally {
       setLoading(false);
     }
   };
 
   // ================= PAYMENT =================
- const handlePayment = async () => {
-  try {
-    setProcessing(true);
+  const handlePayment = async () => {
+    try {
+      setProcessing(true);
 
-    // 1. tạo enrollment
-    const res = await createPaymentAPI({
-      classId: classId,
-      courseId: course._id,
-    });
+      const res = await createPaymentAPI(
+        {
+          classId,
+          courseId: course._id,
+          paymentMethod: paymentMethod,
+        },
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
 
-    const enrollmentId = res.data.enrollmentId;
+      const enrollmentId = res.data.enrollmentId;
 
-    // 2. confirm payment (fake)
-    await confirmPaymentAPI({
-      enrollmentId,
-    });
+      await confirmPaymentAPI(
+        {
+          enrollmentId,
+        },
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
 
-    alert("Thanh toán thành công!");
+      alert("Thanh toán thành công!");
+      navigate(`/courses/${course._id}`);
 
-    // 3. quay về course detail
-    navigate(`/courses/${course._id}`);
+    } catch (err) {
+      console.error(err.response?.data || err.message);
+      alert(err.response?.data?.message || "Payment failed");
+    } finally {
+      setProcessing(false);
+    }
+  };
 
-  } catch (err) {
-    console.error(err);
-    alert("Payment failed");
-  } finally {
-    setProcessing(false);
+  // ================= LOADING =================
+  if (loading || !classData || !course) {
+    return (
+      <Center h="60vh">
+        <Spinner size="xl" />
+      </Center>
+    );
   }
-};
 
   return (
     <Container maxW="5xl" py={10}>
       <Heading mb={6}>Checkout</Heading>
 
-      <Box
-        p={6}
-        bg="white"
-        borderRadius="lg"
-        boxShadow="lg"
-      >
+      <Box p={6} bg="white" borderRadius="lg" boxShadow="lg">
         <VStack align="stretch" spacing={4}>
           
           {/* COURSE */}
           <Box>
-            <Heading size="md">{course?.title}</Heading>
+            <Heading size="sm">Course name</Heading>
+            <Heading size="md">{course.title}</Heading>
 
-            <HStack mt={2}>
-              <Badge colorScheme="purple">
-                {course?.category}
-              </Badge>
-
-              <Badge colorScheme="green">
-                {course?.level}
-              </Badge>
-            </HStack>
-
-            <Text mt={2} color="gray.600">
-              {course?.description}
-            </Text>
           </Box>
 
           <Divider />
 
           {/* CLASS */}
           <Box>
-            <Heading size="sm">Class</Heading>
+            <Heading size="sm">Class name</Heading>
 
-            <Text fontWeight="bold">
-              {classData?.title}
-            </Text>
+            <Text fontWeight="bold">{classData.title}</Text>
 
             <Text fontSize="sm" color="gray.600">
-              Instructor: {classData?.instructor?.name}
+              Instructor: {classData?.instructor?.name || "Unknown"}
             </Text>
           </Box>
 
           <Divider />
+<Box>
+  <Text fontWeight="bold" mb={2}>
+    Payment Method
+  </Text>
 
+  <Select
+    value={paymentMethod}
+    onChange={(e) => setPaymentMethod(e.target.value)}
+  >
+    <option value="STRIPE">Stripe</option>
+    <option value="MOMO">Momo</option>
+    <option value="VNPAY">VNPay</option>
+  </Select>
+</Box>
           {/* PRICE */}
           <HStack justify="space-between">
             <Text fontWeight="bold">Price</Text>
             <Heading size="md">
-              ${course?.price}
+              ${course.price || 0}
             </Heading>
           </HStack>
 
@@ -153,7 +174,6 @@ const PaymentPage = () => {
           <Text fontSize="sm" color="gray.500">
             Full lifetime access
           </Text>
-
         </VStack>
       </Box>
     </Container>
