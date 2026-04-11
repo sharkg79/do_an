@@ -16,8 +16,7 @@ import {
 import { useParams, useNavigate } from "react-router-dom";
 import { useEffect, useState } from "react";
 import axios from "axios";
-import { getLessonsByCourse } from "../../services/lessonService";
-
+import { checkEnrollmentAPI } from "../../api/enrollment.api";
 const CourseDetailPage = () => {
   const { id } = useParams();
   const navigate = useNavigate();
@@ -40,6 +39,7 @@ const CourseDetailPage = () => {
   try {
     setLoading(true);
 
+    // 1. Lấy course + classes
     const res = await axios.get(
       `http://localhost:5000/api/courses/${id}`,
       {
@@ -49,7 +49,18 @@ const CourseDetailPage = () => {
 
     setCourse(res.data.course);
     setClasses(res.data.classes || []);
-    setEnrolledClass(res.data.enrolledClass || null);
+
+    // 2. 🔥 GỌI CHECK ENROLLMENT
+    if (token) {
+      const enrollRes = await checkEnrollmentAPI(id);
+
+      if (enrollRes.data.enrolled) {
+        setEnrolledClass(enrollRes.data.classId); // nhớ backend phải trả classId
+      } else {
+        setEnrolledClass(null);
+      }
+    }
+
   } catch (err) {
     console.error("❌ FETCH COURSE DETAIL:", err.response?.data || err.message);
   } finally {

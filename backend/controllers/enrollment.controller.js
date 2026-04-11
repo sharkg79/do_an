@@ -82,8 +82,9 @@ const checkEnrollment = async (req, res) => {
     });
 
     res.json({
-      enrolled: !!enrollment
-    });
+  enrolled: !!enrollment,
+  classId: enrollment?.class || null
+});
 
   } catch (error) {
     res.status(500).json({ message: error.message });
