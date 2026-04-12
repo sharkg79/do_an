@@ -16,14 +16,14 @@ const upload = require("../middlewares/upload");
 
 // ===== Middleware xử lý file =====
 const handleUpload = (req, res, next) => {
-  if (!req.file) {
-    return res.status(400).json({ message: "File is required" });
+  const { contentUrl } = req.body;
+
+  if (!contentUrl) {
+    return res.status(400).json({ message: "Content URL is required" });
   }
 
-  req.body.contentUrl = `/uploads/${req.file.filename}`;
   next();
 };
-
 // ================= ROUTES =================
 
 // CREATE
@@ -31,7 +31,6 @@ router.post(
   "/",
   auth,
   role(["INSTRUCTOR", "ADMIN"]),
-  upload.single("file"),
   handleUpload,
   createLesson
 );

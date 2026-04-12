@@ -183,15 +183,14 @@ const ManageLessonPage = () => {
                         {(role === "INSTRUCTOR" || role === "ADMIN") && (
                           <>
                             <Button
-                              size="sm"
-                              onClick={() =>
-                                navigate(
-                                  `/dashboard/edit-lesson/${lesson._id}`
-                                )
-                              }
-                            >
-                              Edit
-                            </Button>
+                            size="sm"
+                            onClick={() =>
+                              navigate(`/dashboard/edit-lesson/${lesson._id}`)
+                            }
+                          >
+                            Edit
+                          </Button>
+                        
 
                             <Button
                               size="sm"

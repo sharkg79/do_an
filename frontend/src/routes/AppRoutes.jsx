@@ -204,6 +204,7 @@ const AppRoutes = () => {
         <Route path="lessons" element={<ManageLessonPage />} />
         <Route path="classes/:classId/lessons" element={<ManageLessonPage />} />
         <Route path="create-lesson/:classId" element={<CreateLessonPage />} />
+        <Route path="edit-lesson/:id" element={<CreateLessonPage />} />
 
         {/* ASSIGNMENT */}
         <Route path="assignments" element={<ManageAssignmentPage />} />

@@ -15,7 +15,7 @@ import { useNavigate, useParams } from "react-router-dom";
 import axiosInstance from "../../api/axios";
 
 const CreateLessonPage = () => {
-  const { id } = useParams(); // 👈 edit mode
+  const { id, classId } = useParams(); // 👈 edit mode
   const isEdit = !!id;
 
   const [form, setForm] = useState({
@@ -52,7 +52,7 @@ const CreateLessonPage = () => {
   const fetchLesson = async () => {
     try {
       const res = await axiosInstance.get(`/api/lessons/${id}`);
-      const data = res.data;
+      const data = res.data.lesson;
 
       setForm({
         title: data.title || "",
@@ -70,9 +70,14 @@ const CreateLessonPage = () => {
   };
 
   useEffect(() => {
-    fetchClasses();
-    if (isEdit) fetchLesson();
-  }, [id]);
+  fetchClasses();
+
+  if (classId && !isEdit) {
+    setForm((prev) => ({ ...prev, class: classId }));
+  }
+
+  if (isEdit) fetchLesson();
+}, [id, classId]);
 
   // ================= HANDLE SUBMIT =================
   const handleSubmit = async (e) => {
